@@ -4,14 +4,92 @@
  * Functions for creating DIDs using different methods.
  */
 
-import type { DIDCreateOptions, DIDDocument, VerificationMethod } from './types.js';
+import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from './types.js';
 import { DIDError } from './types.js';
 import { validateDID } from './utils.js';
 
 /**
- * Generate a random identifier
+ * Generate cryptographically secure random bytes
  * 
- * @param length - Length of the identifier
+ * @param length - Number of bytes to generate
+ * @returns Uint8Array of random bytes
+ */
+function getRandomBytes(length: number): Uint8Array {
+  // Try to use crypto.getRandomValues if available
+  if (typeof globalThis !== 'undefined' && 
+      'crypto' in globalThis && 
+      typeof globalThis.crypto === 'object' && 
+      globalThis.crypto !== null &&
+      'getRandomValues' in globalThis.crypto &&
+      typeof globalThis.crypto.getRandomValues === 'function') {
+    const array = new Uint8Array(length);
+    globalThis.crypto.getRandomValues(array);
+    return array;
+  }
+  
+  // Try Node.js crypto module
+  try {
+    const crypto = require('node:crypto') as { randomBytes: (size: number) => Buffer };
+    return new Uint8Array(crypto.randomBytes(length));
+  } catch {
+    // Fallback warning and Math.random (not cryptographically secure)
+    console.warn('[@synet/did] No cryptographically secure random source available. Using Math.random() fallback.');
+    const array = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+    return array;
+  }
+}
+
+/**
+ * Simple base58 encoding (Bitcoin alphabet)
+ * 
+ * @param buffer - Buffer to encode
+ * @returns Base58 encoded string
+ */
+function encodeBase58(buffer: Uint8Array): string {
+  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  
+  if (buffer.length === 0) return '';
+  
+  // Convert bytes to big integer
+  let num = 0n;
+  for (let i = 0; i < buffer.length; i++) {
+    num = num * 256n + BigInt(buffer[i]);
+  }
+  
+  // Convert to base58
+  let result = '';
+  while (num > 0) {
+    const remainder = Number(num % 58n);
+    result = alphabet[remainder] + result;
+    num = num / 58n;
+  }
+  
+  // Handle leading zeros
+  for (let i = 0; i < buffer.length && buffer[i] === 0; i++) {
+    result = `1${result}`;
+  }
+  
+  return result;
+}
+
+/**
+ * Generate a cryptographically secure random identifier
+ * 
+ * @param length - Length in bytes (not characters)
+ * @returns Base58 encoded random identifier
+ */
+function generateSecureIdentifier(length = 32): string {
+  const randomBytes = getRandomBytes(length);
+  return encodeBase58(randomBytes);
+}
+
+/**
+ * Generate a simple random identifier (for backwards compatibility)
+ * 
+ * @param length - Length of the identifier in characters
  * @returns Random identifier string
  */
 function generateIdentifier(length = 32): string {
@@ -42,8 +120,10 @@ export function createDIDKey(options: { publicKey?: string; keyType?: 'Ed25519' 
     // Use provided public key as identifier
     identifier = publicKey;
   } else {
-    // Generate a random identifier (in real implementation, this would derive from a key)
-    identifier = `${keyType.toLowerCase()}-${generateIdentifier(32)}`;
+    // Generate a cryptographically secure identifier
+    // For did:key, we use base58 encoding which is more appropriate
+    const secureId = generateSecureIdentifier(32);
+    identifier = `${keyType.toLowerCase()}-${secureId}`;
   }
   
   const did = `did:key:${identifier}`;
@@ -100,7 +180,7 @@ export function createDIDWeb(domain: string, path?: string): string {
  * @returns DID string
  */
 export function createDIDSynet(identifier?: string): string {
-  const id = identifier || generateIdentifier(42);
+  const id = identifier || generateSecureIdentifier(32); // Use secure generation
   
   if (id.length < 8) {
     throw new DIDError('Synet DID identifier must be at least 8 characters');
@@ -158,7 +238,7 @@ export function createDIDDocument(
     publicKey?: string;
     keyType?: string;
     controller?: string;
-    services?: Array<{ id: string; type: string; serviceEndpoint: string }>;
+    services?: Array<{ id: string; type: string; serviceEndpoint: string; [x: string]: unknown }>;
   } = {}
 ): DIDDocument {
   const validation = validateDID(did);
@@ -193,11 +273,15 @@ export function createDIDDocument(
   
   // Add services if provided
   if (services && services.length > 0) {
-    document.service = services.map(service => ({
-      id: service.id.startsWith('#') ? `${did}${service.id}` : service.id,
-      type: service.type,
-      serviceEndpoint: service.serviceEndpoint
-    }));
+    document.service = services.map(service => {
+      const { id, type, serviceEndpoint, ...additionalProps } = service;
+      return {
+        id: id.startsWith('#') ? `${did}${id}` : id,
+        type,
+        serviceEndpoint,
+        ...additionalProps
+      } as Service;
+    });
   }
   
   return document;

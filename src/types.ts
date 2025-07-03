@@ -3,6 +3,8 @@
  * 
  * Core types and interfaces for Decentralized Identifiers (DIDs).
  * This package provides minimal, dependency-free DID creation and manipulation.
+ * 
+ * Types aligned with did-resolver specification for maximum compatibility.
  */
 
 /**
@@ -22,40 +24,104 @@ export interface DIDComponents {
 }
 
 /**
- * DID Document verification method
+ * Key capability sections from DID specification
+ */
+export type KeyCapabilitySection =
+  | 'authentication'
+  | 'assertionMethod'
+  | 'keyAgreement'
+  | 'capabilityInvocation'
+  | 'capabilityDelegation';
+
+/**
+ * JSON Web Key structure for public keys
+ */
+export interface JsonWebKey {
+  kty: string;
+  use?: string;
+  key_ops?: string[];
+  alg?: string;
+  kid?: string;
+  x5u?: string;
+  x5c?: string[];
+  x5t?: string;
+  'x5t#S256'?: string;
+  // Additional properties based on key type
+  [x: string]: unknown;
+}
+
+/**
+ * DID Document verification method (aligned with did-resolver)
  */
 export interface VerificationMethod {
   id: string;
   type: string;
   controller: string;
+  // Standard public key formats
+  publicKeyBase58?: string;
+  publicKeyBase64?: string;
+  publicKeyJwk?: JsonWebKey;
+  publicKeyHex?: string;
   publicKeyMultibase?: string;
-  publicKeyJwk?: Record<string, unknown>;
+  // Blockchain-specific formats
+  blockchainAccountId?: string;
+  ethereumAddress?: string;
+  // ConditionalProof2022 subtypes (future-proofing)
+  conditionOr?: VerificationMethod[];
+  conditionAnd?: VerificationMethod[];
+  threshold?: number;
+  conditionThreshold?: VerificationMethod[];
+  conditionWeightedThreshold?: ConditionWeightedThreshold[];
+  conditionDelegated?: string;
+  relationshipParent?: string[];
+  relationshipChild?: string[];
+  relationshipSibling?: string[];
 }
 
 /**
- * DID Document service endpoint
+ * Condition weighted threshold for ConditionalProof2022
  */
-export interface ServiceEndpoint {
+export interface ConditionWeightedThreshold {
+  condition: VerificationMethod;
+  weight: number;
+}
+
+/**
+ * Service endpoint type (aligned with did-resolver)
+ */
+export type ServiceEndpoint = string | Record<string, unknown>;
+
+/**
+ * DID Document service (aligned with did-resolver)
+ */
+export interface Service {
   id: string;
   type: string;
-  serviceEndpoint: string | string[] | Record<string, unknown>;
+  serviceEndpoint: ServiceEndpoint | ServiceEndpoint[];
+  // Allow additional properties
+  [x: string]: unknown;
 }
 
 /**
- * DID Document structure
+ * DID Document structure (aligned with did-resolver)
  */
 export interface DIDDocument {
-  '@context'?: string | string[];
+  '@context'?: 'https://www.w3.org/ns/did/v1' | string | string[];
   id: string;
+  alsoKnownAs?: string[];
   controller?: string | string[];
   verificationMethod?: VerificationMethod[];
+  service?: Service[];
+  /**
+   * @deprecated Use verificationMethod instead
+   */
+  publicKey?: VerificationMethod[];
+  // Key capability sections
   authentication?: (string | VerificationMethod)[];
   assertionMethod?: (string | VerificationMethod)[];
   keyAgreement?: (string | VerificationMethod)[];
   capabilityInvocation?: (string | VerificationMethod)[];
   capabilityDelegation?: (string | VerificationMethod)[];
-  service?: ServiceEndpoint[];
-  alsoKnownAs?: string[];
 }
 
 /**

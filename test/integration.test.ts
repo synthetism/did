@@ -96,14 +96,15 @@ describe('Integration Tests', () => {
       
       // Verify it's a valid DID
       expect(isDID(did)).toBe(true);
-      expect(did).toMatch(/^did:synet:[a-zA-Z0-9]{42}$/);
+      expect(did).toMatch(/^did:synet:[a-zA-Z0-9]{32,50}$/);
       
       // Parse the DID
       const parsed = parseDID(did);
       expect(parsed.isValid).toBe(true);
       expect(parsed.components.method).toBe('synet');
       expect(parsed.components.identifier).toBeDefined();
-      expect(parsed.components.identifier.length).toBe(42);
+      expect(parsed.components.identifier.length).toBeGreaterThanOrEqual(32);
+      expect(parsed.components.identifier.length).toBeLessThanOrEqual(50);
       
       // Validate the DID
       const validation = validateDID(did);
