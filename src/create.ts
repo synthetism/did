@@ -1,7 +1,7 @@
 /**
- * 
+ *
  * @synet/did - Production DID Library
- * 
+ *
  * Secure, minimal, standards-compliant DID creation for production environments.
  * Supports only did:key and did:web methods following W3C DID Core specification.
  * Stable, maintained and robust.
@@ -11,10 +11,15 @@
  * - Strict input validation and sanitization
  * - Minimal attack surface
  * - Standards-compliant multicodec encoding
- * 
+ *
  */
 
-import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from "./types";
+import type {
+  DIDCreateOptions,
+  DIDDocument,
+  VerificationMethod,
+  Service,
+} from "./types";
 import { DIDError } from "./types";
 import { validateDID } from "./utils";
 
@@ -22,9 +27,9 @@ import { validateDID } from "./utils";
  * Official multicodec codes from https://github.com/multiformats/multicodec
  */
 const MULTICODEC_CODES = {
-  "ed25519-pub": 0xed,      // 237 - Ed25519 public key
-  "secp256k1-pub": 0xe7,    // 231 - Secp256k1 public key (compressed)
-  "x25519-pub": 0xec,       // 236 - Curve25519 public key
+  "ed25519-pub": 0xed, // 237 - Ed25519 public key
+  "secp256k1-pub": 0xe7, // 231 - Secp256k1 public key (compressed)
+  "x25519-pub": 0xec, // 236 - Curve25519 public key
 } as const;
 
 /**
@@ -35,7 +40,8 @@ export type KeyType = keyof typeof MULTICODEC_CODES;
 /**
  * Base58 alphabet (Bitcoin/IPFS standard)
  */
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 /**
  * Secure base58 encoding implementation
@@ -72,13 +78,13 @@ function encodeBase58(bytes: Uint8Array): string {
 function encodeVarint(value: number): Uint8Array {
   const bytes: number[] = [];
   let remaining = value;
-  
+
   while (remaining >= 0x80) {
-    bytes.push((remaining & 0x7F) | 0x80);
+    bytes.push((remaining & 0x7f) | 0x80);
     remaining >>>= 7;
   }
-  bytes.push(remaining & 0x7F);
-  
+  bytes.push(remaining & 0x7f);
+
   return new Uint8Array(bytes);
 }
 
@@ -87,15 +93,15 @@ function encodeVarint(value: number): Uint8Array {
  */
 function encodeMultibase(keyBytes: Uint8Array, keyType: KeyType): string {
   const codecCode = MULTICODEC_CODES[keyType];
-  
+
   // Use varint encoding for the multicodec prefix as per standards
   const codecBytes = encodeVarint(codecCode);
-  
+
   // Combine multicodec prefix with key bytes
   const combined = new Uint8Array(codecBytes.length + keyBytes.length);
   combined.set(codecBytes, 0);
   combined.set(keyBytes, codecBytes.length);
-  
+
   // Return base58btc encoded (prefix 'z')
   return `z${encodeBase58(combined)}`;
 }
@@ -106,17 +112,17 @@ function encodeMultibase(keyBytes: Uint8Array, keyType: KeyType): string {
 function validateHexString(hex: string): string {
   // Remove 0x prefix if present
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  
+
   // Validate hex format
   if (!/^[0-9a-fA-F]+$/.test(clean)) {
     throw new DIDError("Invalid hexadecimal format");
   }
-  
+
   // Ensure even length
   if (clean.length % 2 !== 0) {
     throw new DIDError("Hexadecimal string must have even length");
   }
-  
+
   return clean;
 }
 
@@ -126,11 +132,11 @@ function validateHexString(hex: string): string {
 function hexToBytes(hex: string): Uint8Array {
   const clean = validateHexString(hex);
   const bytes = new Uint8Array(clean.length / 2);
-  
+
   for (let i = 0; i < clean.length; i += 2) {
     bytes[i / 2] = Number.parseInt(clean.substr(i, 2), 16);
   }
-  
+
   return bytes;
 }
 
@@ -139,15 +145,15 @@ function hexToBytes(hex: string): Uint8Array {
  */
 function validateKeyLength(keyBytes: Uint8Array, keyType: KeyType): void {
   const expectedLengths: Record<KeyType, number[]> = {
-    "ed25519-pub": [32],              // Ed25519 is always 32 bytes
-    "secp256k1-pub": [33, 65],        // Compressed (33) or uncompressed (65)
-    "x25519-pub": [32],               // X25519 is always 32 bytes
+    "ed25519-pub": [32], // Ed25519 is always 32 bytes
+    "secp256k1-pub": [33, 65], // Compressed (33) or uncompressed (65)
+    "x25519-pub": [32], // X25519 is always 32 bytes
   };
 
   const allowed = expectedLengths[keyType];
   if (!allowed.includes(keyBytes.length)) {
     throw new DIDError(
-      `Invalid key length for ${keyType}: expected ${allowed.join(" or ")} bytes, got ${keyBytes.length}`
+      `Invalid key length for ${keyType}: expected ${allowed.join(" or ")} bytes, got ${keyBytes.length}`,
     );
   }
 }
@@ -178,14 +184,14 @@ function validateDomain(domain: string): void {
 
 /**
  * Create a did:key DID from a public key
- * 
+ *
  * @param publicKeyHex - Public key in hexadecimal format
  * @param keyType - Type of cryptographic key (legacy names supported)
  * @returns Standards-compliant did:key DID
  */
 export function createDIDKey(
   publicKeyHex: string,
-  keyType: KeyType | "Ed25519" | "secp256k1" | "X25519" = "ed25519-pub"
+  keyType: KeyType | "Ed25519" | "secp256k1" | "X25519" = "ed25519-pub",
 ): string {
   if (!publicKeyHex || typeof publicKeyHex !== "string") {
     throw new DIDError("Public key is required");
@@ -193,12 +199,12 @@ export function createDIDKey(
 
   // Map legacy key types to new format
   const keyTypeMap: Record<string, KeyType> = {
-    "Ed25519": "ed25519-pub",
-    "secp256k1": "secp256k1-pub", 
-    "X25519": "x25519-pub",
+    Ed25519: "ed25519-pub",
+    secp256k1: "secp256k1-pub",
+    X25519: "x25519-pub",
     "ed25519-pub": "ed25519-pub",
     "secp256k1-pub": "secp256k1-pub",
-    "x25519-pub": "x25519-pub"
+    "x25519-pub": "x25519-pub",
   };
 
   const normalizedKeyType = keyTypeMap[keyType];
@@ -209,20 +215,22 @@ export function createDIDKey(
   try {
     const keyBytes = hexToBytes(publicKeyHex);
     validateKeyLength(keyBytes, normalizedKeyType);
-    
+
     const multibaseId = encodeMultibase(keyBytes, normalizedKeyType);
     return `did:key:${multibaseId}`;
   } catch (error) {
     if (error instanceof DIDError) {
       throw error;
     }
-    throw new DIDError(`Failed to create did:key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new DIDError(
+      `Failed to create did:key: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
 /**
  * Create a did:web DID
- * 
+ *
  * @param domain - Domain name for the DID
  * @param path - Optional path component
  * @returns Standards-compliant did:web DID
@@ -239,7 +247,7 @@ export function createDIDWeb(domain: string, path?: string): string {
     if (typeof path !== "string") {
       throw new DIDError("Path must be a string");
     }
-    
+
     // Replace forward slashes with colons per did:web spec
     const encodedPath = path.replace(/\//g, ":");
     identifier += `:${encodedPath}`;
@@ -250,7 +258,7 @@ export function createDIDWeb(domain: string, path?: string): string {
 
 /**
  * Create a DID using the specified method
- * 
+ *
  * @param options - DID creation options
  * @returns DID string
  */
@@ -262,16 +270,18 @@ export function createDID(options: DIDCreateOptions): string {
       }
       return createDIDKey(options.publicKey, options.keyType);
     }
-    
+
     case "web": {
       if (!options.domain) {
         throw new DIDError("domain is required for did:web");
       }
       return createDIDWeb(options.domain, options.path);
     }
-    
+
     default:
-      throw new DIDError(`Unsupported DID method: ${(options as { method: string }).method}`);
+      throw new DIDError(
+        `Unsupported DID method: ${(options as { method: string }).method}`,
+      );
   }
 }
 
@@ -294,7 +304,7 @@ export function createDIDDocument(
     capabilityInvocation?: (string | VerificationMethod)[];
     capabilityDelegation?: (string | VerificationMethod)[];
     service?: Service[];
-    mediaType?: 'application/did+json' | 'application/did+ld+json';
+    mediaType?: "application/did+json" | "application/did+ld+json";
   } = {},
 ): DIDDocument {
   const validation = validateDID(did);
@@ -323,7 +333,10 @@ export function createDIDDocument(
   // Only add @context for JSON-LD or when explicitly specified
   if (contextOption !== undefined) {
     document["@context"] = contextOption;
-  } else if (mediaType === 'application/did+ld+json' || mediaType === undefined) {
+  } else if (
+    mediaType === "application/did+ld+json" ||
+    mediaType === undefined
+  ) {
     // Default to JSON-LD context unless explicitly requesting plain JSON
     document["@context"] = [
       "https://www.w3.org/ns/did/v1",
@@ -361,12 +374,12 @@ export function createDIDDocument(
 
   // Add services if provided
   if (service && service.length > 0) {
-    document.service = service.map(svc => {
+    document.service = service.map((svc) => {
       // If the service id is a fragment (starts with #), make it fully qualified
-      if (svc.id.startsWith('#')) {
+      if (svc.id.startsWith("#")) {
         return {
           ...svc,
-          id: `${did}${svc.id}`
+          id: `${did}${svc.id}`,
         };
       }
       // Otherwise, keep the service as is

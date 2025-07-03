@@ -130,7 +130,13 @@ export interface DIDDocument {
 export interface DIDCreateOptions {
   method: DIDMethod;
   publicKey?: string; // Required for did:key method
-  keyType?: "ed25519-pub" | "secp256k1-pub" | "x25519-pub" | "Ed25519" | "secp256k1" | "X25519"; // Support legacy names
+  keyType?:
+    | "ed25519-pub"
+    | "secp256k1-pub"
+    | "x25519-pub"
+    | "Ed25519"
+    | "secp256k1"
+    | "X25519"; // Support legacy names
   domain?: string; // Required for did:web method
   path?: string; // Optional path for did:web
 }

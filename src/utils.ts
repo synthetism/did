@@ -43,7 +43,7 @@ export function parseDID(did: string): DIDParseResult {
   }
 
   const trimmed = did.trim();
-  
+
   // Check for empty string after trimming
   if (!trimmed) {
     return {
@@ -53,7 +53,7 @@ export function parseDID(did: string): DIDParseResult {
       error: "Empty DID string is invalid",
     };
   }
-  
+
   const match = trimmed.match(DID_REGEX);
 
   if (!match) {
@@ -129,7 +129,9 @@ export function validateDID(did: string): DIDValidationResult {
   if (!SUPPORTED_METHODS.includes(components.method)) {
     // For methods that look valid but aren't supported, warn instead of rejecting
     if (/^[a-z][a-z0-9]*$/.test(components.method)) {
-      warnings.push(`Method '${components.method}' is not officially supported`);
+      warnings.push(
+        `Method '${components.method}' is not officially supported`,
+      );
     } else {
       return {
         isValid: false,
@@ -157,7 +159,7 @@ export function validateDID(did: string): DIDValidationResult {
           };
         }
         // Check that it starts with 'z' for multibase encoding
-        if (!components.identifier.startsWith('z')) {
+        if (!components.identifier.startsWith("z")) {
           return {
             isValid: false,
             error: "Invalid did:key identifier format",
@@ -230,18 +232,18 @@ export function isDID(did: string): boolean {
 
   // Use the same strict DID format check as parseDID
   const match = did.trim().match(DID_REGEX);
-  
+
   if (!match) {
     return false;
   }
 
   const [, method, identifier] = match;
-  
+
   // Validate that method and identifier are not empty
   if (!method || !identifier) {
     return false;
   }
-  
+
   // Allow supported methods and valid-looking unsupported methods
   if (!SUPPORTED_METHODS.includes(method as DIDMethod)) {
     // Only allow methods that follow the proper format
@@ -255,7 +257,7 @@ export function isDID(did: string): boolean {
     switch (method as DIDMethod) {
       case "key":
         // did:key identifiers must start with 'z' for multibase encoding
-        if (!identifier.startsWith('z')) {
+        if (!identifier.startsWith("z")) {
           return false;
         }
         // Check for invalid characters in did:key identifiers
@@ -288,7 +290,7 @@ export function extractMethod(did: string): string | null {
   if (!did || typeof did !== "string") {
     return null;
   }
-  
+
   const match = did.match(/^did:([a-z0-9]+):/);
   return match ? match[1] : null;
 }
@@ -303,7 +305,7 @@ export function extractIdentifier(did: string): string | null {
   if (!did || typeof did !== "string") {
     return null;
   }
-  
+
   const match = did.match(/^did:[a-z0-9]+:([^/?#]+)/);
   return match ? match[1] : null;
 }
