@@ -15,10 +15,11 @@ import { DIDError } from "./types";
 /**
  * DID URL regex pattern
  * Format: did:method:identifier[/path][?query][#fragment]
+ * Method names must start with lowercase letter and contain only lowercase letters and digits
  * Updated to handle colons and other characters in identifiers
  */
 const DID_REGEX =
-  /^did:([a-z0-9]+):([^/?#]+)(?:\/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?$/;
+  /^did:([a-z][a-z0-9]*):([^/?#]+)(?:\/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?$/;
 
 /**
  * Supported DID methods for production use
@@ -42,6 +43,17 @@ export function parseDID(did: string): DIDParseResult {
   }
 
   const trimmed = did.trim();
+  
+  // Check for empty string after trimming
+  if (!trimmed) {
+    return {
+      did: trimmed,
+      components: { method: "key", identifier: "" },
+      isValid: false,
+      error: "Empty DID string is invalid",
+    };
+  }
+  
   const match = trimmed.match(DID_REGEX);
 
   if (!match) {
@@ -49,11 +61,21 @@ export function parseDID(did: string): DIDParseResult {
       did: trimmed,
       components: { method: "key", identifier: "" },
       isValid: false,
-      error: "Invalid DID format",
+      error: "Invalid DID format - must match scheme:method:identifier pattern",
     };
   }
 
   const [, method, identifier, path, query, fragment] = match;
+
+  // Validate that we have non-empty method and identifier
+  if (!method || !identifier) {
+    return {
+      did: trimmed,
+      components: { method: "key", identifier: "" },
+      isValid: false,
+      error: "DID method and identifier cannot be empty",
+    };
+  }
 
   // Parse query parameters
   const queryParams: Record<string, string> = {};
@@ -105,36 +127,60 @@ export function validateDID(did: string): DIDValidationResult {
 
   // Check if method is supported
   if (!SUPPORTED_METHODS.includes(components.method)) {
-    warnings.push(`Method '${components.method}' is not officially supported`);
+    // For methods that look valid but aren't supported, warn instead of rejecting
+    if (/^[a-z][a-z0-9]*$/.test(components.method)) {
+      warnings.push(`Method '${components.method}' is not officially supported`);
+    } else {
+      return {
+        isValid: false,
+        error: `Invalid DID method name: '${components.method}'`,
+      };
+    }
   }
 
-  // Method-specific validation
-  switch (components.method) {
-    case "key":
-      // did:key identifiers should not contain spaces or certain special characters
-      if (!components.identifier || components.identifier.length === 0) {
-        return {
-          isValid: false,
-          error: "Invalid did:key identifier format",
-        };
-      }
-      // Check for invalid characters in did:key identifiers
-      if (/[\s!@#$%^&*()+=\[\]{}|\\:";'<>?,./]/.test(components.identifier)) {
-        return {
-          isValid: false,
-          error: "Invalid did:key identifier format",
-        };
-      }
-      break;
+  // Method-specific validation for supported methods
+  if (SUPPORTED_METHODS.includes(components.method)) {
+    switch (components.method) {
+      case "key":
+        // did:key identifiers should not contain spaces or certain special characters
+        if (!components.identifier || components.identifier.length === 0) {
+          return {
+            isValid: false,
+            error: "Empty did:key identifier",
+          };
+        }
+        // Check for invalid characters in did:key identifiers
+        if (/[\s!@#$%^&*()+=\[\]{}|\\:";'<>?,./]/.test(components.identifier)) {
+          return {
+            isValid: false,
+            error: "Invalid did:key identifier format",
+          };
+        }
+        // Check that it starts with 'z' for multibase encoding
+        if (!components.identifier.startsWith('z')) {
+          return {
+            isValid: false,
+            error: "Invalid did:key identifier format",
+          };
+        }
+        // Check minimum length for valid did:key (z + at least some encoded data)
+        if (components.identifier.length < 10) {
+          return {
+            isValid: false,
+            error: "Invalid did:key identifier format",
+          };
+        }
+        break;
 
-    case "web":
-      if (!components.identifier.includes(".")) {
-        return {
-          isValid: false,
-          error: "did:web identifier must be a valid domain name",
-        };
-      }
-      break;
+      case "web":
+        if (!components.identifier.includes(".")) {
+          return {
+            isValid: false,
+            error: "did:web identifier must be a valid domain name",
+          };
+        }
+        break;
+    }
   }
 
   return {
@@ -182,9 +228,8 @@ export function isDID(did: string): boolean {
     return false;
   }
 
-  // Basic DID format check
-  const didRegex = /^did:([a-z0-9]+):(.+)$/;
-  const match = did.match(didRegex);
+  // Use the same strict DID format check as parseDID
+  const match = did.trim().match(DID_REGEX);
   
   if (!match) {
     return false;
@@ -192,14 +237,42 @@ export function isDID(did: string): boolean {
 
   const [, method, identifier] = match;
   
-  // Validate supported methods
-  if (!SUPPORTED_METHODS.includes(method as DIDMethod)) {
+  // Validate that method and identifier are not empty
+  if (!method || !identifier) {
     return false;
   }
+  
+  // Allow supported methods and valid-looking unsupported methods
+  if (!SUPPORTED_METHODS.includes(method as DIDMethod)) {
+    // Only allow methods that follow the proper format
+    if (!/^[a-z][a-z0-9]*$/.test(method)) {
+      return false;
+    }
+  }
 
-  // Basic identifier validation
-  if (!identifier || identifier.length === 0) {
-    return false;
+  // Method-specific validation only for supported methods
+  if (SUPPORTED_METHODS.includes(method as DIDMethod)) {
+    switch (method as DIDMethod) {
+      case "key":
+        // did:key identifiers must start with 'z' for multibase encoding
+        if (!identifier.startsWith('z')) {
+          return false;
+        }
+        // Check for invalid characters in did:key identifiers
+        if (/[\s!@#$%^&*()+=\[\]{}|\\:";'<>?,./]/.test(identifier)) {
+          return false;
+        }
+        // Check minimum length for valid did:key (z + at least some encoded data)
+        if (identifier.length < 10) {
+          return false;
+        }
+        break;
+      case "web":
+        if (!identifier.includes(".")) {
+          return false;
+        }
+        break;
+    }
   }
 
   return true;

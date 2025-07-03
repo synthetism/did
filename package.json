@@ -1,6 +1,6 @@
 {
   "name": "@synet/did",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Secure, minimal, standards-compliant DID library for production environments. Supports did:key and did:web methods with strict validation and cryptographic security.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:online": "npm run build && node scripts/online-test.js",
     "clean": "rimraf dist",
     "lint": "biome lint ./src",
     "lint:fix": "biome lint --write ./src",
@@ -66,7 +67,8 @@
     "production"
   ],
   "author": "Synet Team",
-  "homepage": "https://synet.ai",
+  "homepage": "https://synthetism.ai",
+  "email": "core@synthetism.ai",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

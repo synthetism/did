@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { createDIDKey } = require('./dist/index.js');
+const { createDIDKey } = require('../dist/index.js');
 
 console.log('Testing DID:key creation with new implementation:');
 

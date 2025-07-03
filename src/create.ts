@@ -1,14 +1,17 @@
 /**
+ * 
  * @synet/did - Production DID Library
  * 
  * Secure, minimal, standards-compliant DID creation for production environments.
  * Supports only did:key and did:web methods following W3C DID Core specification.
- * 
+ * Stable, maintained and robust.
+ *
  * Security Features:
  * - No cryptographic fallbacks to weak sources
  * - Strict input validation and sanitization
  * - Minimal attack surface
  * - Standards-compliant multicodec encoding
+ * 
  */
 
 import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from "./types";
@@ -291,6 +294,7 @@ export function createDIDDocument(
     capabilityInvocation?: (string | VerificationMethod)[];
     capabilityDelegation?: (string | VerificationMethod)[];
     service?: Service[];
+    mediaType?: 'application/did+json' | 'application/did+ld+json';
   } = {},
 ): DIDDocument {
   const validation = validateDID(did);
@@ -308,16 +312,24 @@ export function createDIDDocument(
     capabilityInvocation,
     capabilityDelegation,
     service,
+    mediaType,
   } = options;
 
   const document: DIDDocument = {
-    "@context": contextOption || [
-      "https://www.w3.org/ns/did/v1",
-      "https://w3id.org/security/suites/ed25519-2020/v1",
-    ],
     id: did,
     controller: controller || did,
   };
+
+  // Only add @context for JSON-LD or when explicitly specified
+  if (contextOption !== undefined) {
+    document["@context"] = contextOption;
+  } else if (mediaType === 'application/did+ld+json' || mediaType === undefined) {
+    // Default to JSON-LD context unless explicitly requesting plain JSON
+    document["@context"] = [
+      "https://www.w3.org/ns/did/v1",
+      "https://w3id.org/security/suites/ed25519-2020/v1",
+    ];
+  }
 
   // Add verification method if provided
   if (verificationMethod) {
