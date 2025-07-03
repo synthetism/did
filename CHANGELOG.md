@@ -8,11 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-07-03
 
 ### Added
+
 - Initial release of @synet/did package
 - Support for creating DIDs with three methods:
   - `did:key` - Key-based DIDs
-  - `did:web` - Web-based DIDs  
-  - `did:synet` - Synet network DIDs
+  - `did:web` - Web-based DIDs
 - DID parsing and validation functionality
 - DID document creation with verification methods and services
 - Comprehensive utility functions:
@@ -27,15 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete documentation and examples
 
 ### Features
-- 🎯 **Zero dependencies** - No external runtime dependencies
-- 🔐 **Multiple DID methods** - Support for did:key, did:web, and did:synet
-- 🎨 **Type-safe** - Full TypeScript support
-- 📝 **DID Documents** - Generate basic DID documents
-- ✅ **Validation** - Parse and validate DID URLs
-- 🧪 **Well-tested** - Comprehensive test suite
-- 📦 **Lightweight** - Minimal footprint with tree-shaking support
+
+- **Zero dependencies** - No external runtime dependencies
+- **Multiple DID methods** - Support for did:key, did:web
+- **Type-safe** - Full TypeScript support
+- **DID Documents** - Generate basic DID documents
+- **Validation** - Parse and validate DID URLs
+- **Well-tested** - Comprehensive test suite
+- **Lightweight** - Minimal footprint with tree-shaking support
 
 ### Technical Details
+
 - Built with TypeScript 5.8+
 - Uses ES modules (ESM) format
 - Supports Node.js 18+

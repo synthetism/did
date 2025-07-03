@@ -19,7 +19,7 @@ describe('Refactored DID Library', () => {
     const did = createDIDKey(publicKeyHex, "Ed25519");
     
     expect(isDID(did)).toBe(true);
-    expect(did).toBe('did:key:z2DeuicgUFGK9784FgMs5DG57pbDLWGaDu6TnXCisMgptRw');
+    expect(did).toBe('did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw');
     
     const validation = validateDID(did);
     expect(validation.isValid).toBe(true);

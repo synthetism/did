@@ -64,13 +64,29 @@ function encodeBase58(bytes: Uint8Array): string {
 }
 
 /**
+ * Encode an unsigned integer using varint (unsigned LEB128) encoding
+ */
+function encodeVarint(value: number): Uint8Array {
+  const bytes: number[] = [];
+  let remaining = value;
+  
+  while (remaining >= 0x80) {
+    bytes.push((remaining & 0x7F) | 0x80);
+    remaining >>>= 7;
+  }
+  bytes.push(remaining & 0x7F);
+  
+  return new Uint8Array(bytes);
+}
+
+/**
  * Create multibase-encoded string with multicodec prefix
  */
 function encodeMultibase(keyBytes: Uint8Array, keyType: KeyType): string {
   const codecCode = MULTICODEC_CODES[keyType];
   
-  // For single-byte multicodec codes, we don't need varint encoding
-  const codecBytes = new Uint8Array([codecCode]);
+  // Use varint encoding for the multicodec prefix as per standards
+  const codecBytes = encodeVarint(codecCode);
   
   // Combine multicodec prefix with key bytes
   const combined = new Uint8Array(codecBytes.length + keyBytes.length);
@@ -333,7 +349,17 @@ export function createDIDDocument(
 
   // Add services if provided
   if (service && service.length > 0) {
-    document.service = service;
+    document.service = service.map(svc => {
+      // If the service id is a fragment (starts with #), make it fully qualified
+      if (svc.id.startsWith('#')) {
+        return {
+          ...svc,
+          id: `${did}${svc.id}`
+        };
+      }
+      // Otherwise, keep the service as is
+      return svc;
+    });
   }
 
   return document;

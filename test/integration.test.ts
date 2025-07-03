@@ -51,8 +51,17 @@ describe('Integration Tests', () => {
       expect(normalized).toBe(did);
       
       // Create a DID document
+      const verificationMethod = {
+        id: `${did}#keys-1`,
+        type: 'Ed25519VerificationKey2020',
+        controller: did,
+        publicKeyMultibase: 'z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw'
+      };
+      
       const document = createDIDDocument(did, {
-        publicKey: 'z2DeuicgUFGK9784FgMs5DG57pbDLWGaDu6TnXCisMgptRw'
+        verificationMethod,
+        authentication: [`${did}#keys-1`],
+        assertionMethod: [`${did}#keys-1`]
       });
       
       expect(document.id).toBe(did);
@@ -85,7 +94,7 @@ describe('Integration Tests', () => {
       
       // Create a DID document with services
       const document = createDIDDocument(did, {
-        services: [
+        service: [
           { id: '#agent', type: 'DIDCommMessaging', serviceEndpoint: 'https://example.com/agent' }
         ]
       });

@@ -211,13 +211,13 @@ export function isDID(did: string): boolean {
  * @param did - DID URL
  * @returns DID method or null if invalid
  */
-export function extractMethod(did: string): DIDMethod | null {
-  if (!isDID(did)) {
+export function extractMethod(did: string): string | null {
+  if (!did || typeof did !== "string") {
     return null;
   }
   
   const match = did.match(/^did:([a-z0-9]+):/);
-  return match ? match[1] as DIDMethod : null;
+  return match ? match[1] : null;
 }
 
 /**
@@ -227,11 +227,11 @@ export function extractMethod(did: string): DIDMethod | null {
  * @returns DID identifier or null if invalid
  */
 export function extractIdentifier(did: string): string | null {
-  if (!isDID(did)) {
+  if (!did || typeof did !== "string") {
     return null;
   }
   
-  const match = did.match(/^did:[a-z0-9]+:(.+)$/);
+  const match = did.match(/^did:[a-z0-9]+:([^/?#]+)/);
   return match ? match[1] : null;
 }
 
