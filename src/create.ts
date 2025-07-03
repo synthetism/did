@@ -98,26 +98,6 @@ function generateSecureIdentifier(length = 32): string {
 }
 
 /**
- * Generate a simple random identifier (for backwards compatibility)
- *
- * @param length - Length of the identifier in characters
- * @returns Random identifier string
- */
-function generateIdentifier(length = 32): string {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-
-  // Simple fallback to Math.random for now
-  // In a real implementation, we'd use proper cryptographic randomness
-  for (let i = 0; i < length; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-
-  return result;
-}
-
-/**
  * Create a did:key DID
  *
  * @param options - Creation options
