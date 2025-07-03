@@ -1,14 +1,14 @@
 /**
  * @synet/did - Simple DID library for Synet network
- * 
+ *
  * A minimal, dependency-free library for creating and manipulating
  * Decentralized Identifiers (DIDs). This package provides:
- * 
+ *
  * - DID creation for did:key, did:web, and did:synet methods
  * - DID parsing and validation
  * - Basic DID document generation
  * - Type-safe interfaces and utilities
- * 
+ *
  * @version 1.0.0
  * @license MIT
  */
@@ -22,11 +22,11 @@ export type {
   DIDCreateOptions,
   DIDDocument,
   VerificationMethod,
-  ServiceEndpoint
-} from './types';
+  ServiceEndpoint,
+} from "./types";
 
 // Export error class
-export { DIDError } from './types';
+export { DIDError } from "./types";
 
 // Export utilities
 export {
@@ -36,8 +36,8 @@ export {
   isDID,
   extractMethod,
   extractIdentifier,
-  normalizeDID
-} from './utils';
+  normalizeDID,
+} from "./utils";
 
 // Export creators
 export {
@@ -45,8 +45,8 @@ export {
   createDIDKey,
   createDIDWeb,
   createDIDSynet,
-  createDIDDocument
-} from './create';
+  createDIDDocument,
+} from "./create";
 
 // Import functions for default export
 import {
@@ -54,8 +54,8 @@ import {
   createDIDKey,
   createDIDWeb,
   createDIDSynet,
-  createDIDDocument
-} from './create';
+  createDIDDocument,
+} from "./create";
 
 import {
   parseDID,
@@ -63,11 +63,11 @@ import {
   isDID,
   extractMethod,
   extractIdentifier,
-  normalizeDID
-} from './utils';
+  normalizeDID,
+} from "./utils";
 
 // Version export
-export const VERSION = '1.0.0';
+export const VERSION = "1.0.0";
 
 // Default export for convenience
 export default {
@@ -82,5 +82,5 @@ export default {
   extractMethod,
   extractIdentifier,
   normalizeDID,
-  VERSION
+  VERSION,
 };

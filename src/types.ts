@@ -1,16 +1,16 @@
 /**
  * @synet/did - Simple DID library for Synet network
- * 
+ *
  * Core types and interfaces for Decentralized Identifiers (DIDs).
  * This package provides minimal, dependency-free DID creation and manipulation.
- * 
+ *
  * Types aligned with did-resolver specification for maximum compatibility.
  */
 
 /**
  * Supported DID methods
  */
-export type DIDMethod = 'key' | 'web' | 'synet';
+export type DIDMethod = "key" | "web" | "synet";
 
 /**
  * DID URL components
@@ -27,11 +27,11 @@ export interface DIDComponents {
  * Key capability sections from DID specification
  */
 export type KeyCapabilitySection =
-  | 'authentication'
-  | 'assertionMethod'
-  | 'keyAgreement'
-  | 'capabilityInvocation'
-  | 'capabilityDelegation';
+  | "authentication"
+  | "assertionMethod"
+  | "keyAgreement"
+  | "capabilityInvocation"
+  | "capabilityDelegation";
 
 /**
  * JSON Web Key structure for public keys
@@ -45,7 +45,7 @@ export interface JsonWebKey {
   x5u?: string;
   x5c?: string[];
   x5t?: string;
-  'x5t#S256'?: string;
+  "x5t#S256"?: string;
   // Additional properties based on key type
   [x: string]: unknown;
 }
@@ -106,7 +106,7 @@ export interface Service {
  * DID Document structure (aligned with did-resolver)
  */
 export interface DIDDocument {
-  '@context'?: 'https://www.w3.org/ns/did/v1' | string | string[];
+  "@context"?: "https://www.w3.org/ns/did/v1" | string | string[];
   id: string;
   alsoKnownAs?: string[];
   controller?: string | string[];
@@ -131,7 +131,7 @@ export interface DIDCreateOptions {
   method: DIDMethod;
   identifier?: string;
   publicKey?: string;
-  keyType?: 'Ed25519' | 'secp256k1';
+  keyType?: "Ed25519" | "secp256k1";
 }
 
 /**
@@ -157,8 +157,11 @@ export interface DIDValidationResult {
  * Error thrown when DID operations fail
  */
 export class DIDError extends Error {
-  constructor(message: string, public code?: string) {
+  constructor(
+    message: string,
+    public code?: string,
+  ) {
     super(message);
-    this.name = 'DIDError';
+    this.name = "DIDError";
   }
 }
