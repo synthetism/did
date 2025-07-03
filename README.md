@@ -1,29 +1,23 @@
 # @synet/did
 
 ```bash
-  ______                                   __               
- /      \                                 /  |              
-/$$$$$$  | __    __  _______    ______   _$$ |_             
-$$ \__$$/ /  |  /  |/       \  /      \ / $$   |            
-$$      \ $$ |  $$ |$$$$$$$  |/$$$$$$  |$$$$$$/             
- $$$$$$  |$$ |  $$ |$$ |  $$ |$$    $$ |  $$ | __           
-/  \__$$ |$$ \__$$ |$$ |  $$ |$$$$$$$$/   $$ |/  |          
-$$    $$/ $$    $$ |$$ |  $$ |$$       |  $$  $$/           
- $$$$$$/   $$$$$$$ |$$/   $$/  $$$$$$$/    $$$$/            
-          /  \__$$ |                                        
-          $$    $$/                                         
-           $$$$$$/                                          
- _______   ______  _______                                  
-/       \ /      |/       \                                 
-$$$$$$$  |$$$$$$/ $$$$$$$  |                                
-$$ |  $$ |  $$ |  $$ |  $$ |                                
-$$ |  $$ |  $$ |  $$ |  $$ |                                
-$$ |  $$ |  $$ |  $$ |  $$ |                                
-$$ |__$$ | _$$ |_ $$ |__$$ |                                
-$$    $$/ / $$   |$$    $$/                                 
-$$$$$$$/  $$$$$$/ $$$$$$$/                                  
-                                                            
-
+ ____                            __      
+/\  _`\                         /\ \__   
+\ \,\L\_\  __  __    ___      __\ \ ,_\  
+ \/_\__ \ /\ \/\ \ /' _ `\  /'__`\ \ \/  
+   /\ \L\ \ \ \_\ \/\ \/\ \/\  __/\ \ \_ 
+   \ `\____\/`____ \ \_\ \_\ \____\\ \__\
+    \/_____/`/___/> \/_/\/_/\/____/ \/__/
+               /\___/                    
+               \/__/                     
+      ____    ______   ____              
+     /\  _`\ /\__  _\ /\  _`\            
+     \ \ \/\ \/_/\ \/ \ \ \/\ \          
+      \ \ \ \ \ \ \ \  \ \ \ \ \         
+       \ \ \_\ \ \_\ \__\ \ \_\ \        
+        \ \____/ /\_____\\ \____/        
+         \/___/  \/_____/ \/___/         
+                                                                                                                  
 version: 1.0.1
 description: You are Signal
 security-level: Never enough
@@ -90,18 +84,10 @@ const document = createDIDDocument(keyDID, {
     { id: '#agent', type: 'DIDCommMessaging', serviceEndpoint: 'https://example.com/agent' }
   ]
 });
+
+
 // Service ID becomes: "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw#agent"
 ```
-
-## Standards Compliance
-
-This library implements the W3C DID Core specification with strict adherence to cryptographic standards:
-
-### Multicodec Encoding
-
-- **Ed25519**: Uses varint-encoded multicodec `0xed` (237) → `z6Mk...` prefixes
-- **secp256k1**: Uses varint-encoded multicodec `0xe7` (231) → `zQ3s...` prefixes
-- **X25519**: Uses varint-encoded multicodec `0xec` (236) → `z6LS...` prefixes
 
 ### DID Key Format Validation
 
@@ -113,6 +99,31 @@ const ed25519Key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707
 const did = createDIDKey(ed25519Key, "ed25519-pub");
 // Guaranteed to produce: "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
 ```
+
+## Standards Compliance
+
+This library implements the W3C DID Core specification with strict adherence to cryptographic standards:
+
+This library implements cryptographic encoding exactly as specified in the standards:
+
+### Multicodec Encoding
+
+- **Ed25519**: Multicodec `0xed` (237) with varint encoding → `z6Mk...` prefixes
+- **secp256k1**: Multicodec `0xe7` (231) with varint encoding → `zQ3s...` prefixes
+- **X25519**: Multicodec `0xec` (236) with varint encoding → `z6LS...` prefixes
+
+### Base58 Encoding
+
+- Uses Bitcoin/IPFS alphabet: `123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`
+- Implements proper leading zero handling
+- No character ambiguity (excludes 0, O, I, l)
+
+### Varint Encoding
+
+- Implements unsigned LEB128 encoding for multicodec prefixes
+- Handles values up to 127 in single byte, larger values in multiple bytes
+- Follows the same encoding used by Protocol Buffers and WebAssembly
+
 
 ## API Reference
 
