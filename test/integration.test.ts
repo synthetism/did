@@ -15,7 +15,7 @@ import {
   extractIdentifier,
   normalizeDID,
   VERSION
-} from '../src/index.js';
+} from '../src/index';
 
 describe('Integration Tests', () => {
   describe('Full DID workflow', () => {

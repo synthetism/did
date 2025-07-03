@@ -4,8 +4,8 @@
  * Core utility functions for DID creation, parsing, and validation.
  */
 
-import type { DIDComponents, DIDMethod, DIDParseResult, DIDValidationResult } from './types.js';
-import { DIDError } from './types.js';
+import type { DIDComponents, DIDMethod, DIDParseResult, DIDValidationResult } from './types';
+import { DIDError } from './types';
 
 /**
  * DID URL regex pattern

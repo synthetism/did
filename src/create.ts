@@ -4,9 +4,9 @@
  * Functions for creating DIDs using different methods.
  */
 
-import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from './types.js';
-import { DIDError } from './types.js';
-import { validateDID } from './utils.js';
+import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from './types';
+import { DIDError } from './types';
+import { validateDID } from './utils';
 
 /**
  * Generate cryptographically secure random bytes
@@ -235,9 +235,18 @@ export function createDID(options: DIDCreateOptions): string {
 export function createDIDDocument(
   did: string, 
   options: {
+    '@context'?: string | string[];
+    controller?: string;
+    verificationMethod?: VerificationMethod | VerificationMethod[];
+    authentication?: (string | VerificationMethod)[];
+    assertionMethod?: (string | VerificationMethod)[];
+    keyAgreement?: (string | VerificationMethod)[];
+    capabilityInvocation?: (string | VerificationMethod)[];
+    capabilityDelegation?: (string | VerificationMethod)[];
+    service?: Service[];
+    // Legacy support
     publicKey?: string;
     keyType?: string;
-    controller?: string;
     services?: Array<{ id: string; type: string; serviceEndpoint: string; [x: string]: unknown }>;
   } = {}
 ): DIDDocument {
@@ -246,10 +255,24 @@ export function createDIDDocument(
     throw new DIDError(`Invalid DID: ${validation.error}`);
   }
   
-  const { publicKey, keyType = 'Ed25519VerificationKey2020', controller, services } = options;
+  const { 
+    '@context': contextOption,
+    controller,
+    verificationMethod,
+    authentication,
+    assertionMethod,
+    keyAgreement,
+    capabilityInvocation,
+    capabilityDelegation,
+    service,
+    // Legacy support
+    publicKey, 
+    keyType = 'Ed25519VerificationKey2020',
+    services 
+  } = options;
   
   const document: DIDDocument = {
-    '@context': [
+    '@context': contextOption || [
       'https://www.w3.org/ns/did/v1',
       'https://w3id.org/security/suites/ed25519-2020/v1'
     ],
@@ -257,24 +280,53 @@ export function createDIDDocument(
     controller: controller || did
   };
   
-  // Add verification method if public key is provided
-  if (publicKey) {
-    const verificationMethod: VerificationMethod = {
+  // Add verification method if provided
+  if (verificationMethod) {
+    document.verificationMethod = Array.isArray(verificationMethod) 
+      ? verificationMethod 
+      : [verificationMethod];
+  } else if (publicKey) {
+    // Legacy support
+    const vm: VerificationMethod = {
       id: `${did}#keys-1`,
       type: keyType,
       controller: document.controller as string,
       publicKeyMultibase: publicKey
     };
     
-    document.verificationMethod = [verificationMethod];
-    document.authentication = [verificationMethod.id];
-    document.assertionMethod = [verificationMethod.id];
+    document.verificationMethod = [vm];
+    document.authentication = [vm.id];
+    document.assertionMethod = [vm.id];
+  }
+  
+  // Add capability sections if provided
+  if (authentication) {
+    document.authentication = authentication;
+  }
+  
+  if (assertionMethod) {
+    document.assertionMethod = assertionMethod;
+  }
+  
+  if (keyAgreement) {
+    document.keyAgreement = keyAgreement;
+  }
+  
+  if (capabilityInvocation) {
+    document.capabilityInvocation = capabilityInvocation;
+  }
+  
+  if (capabilityDelegation) {
+    document.capabilityDelegation = capabilityDelegation;
   }
   
   // Add services if provided
-  if (services && services.length > 0) {
-    document.service = services.map(service => {
-      const { id, type, serviceEndpoint, ...additionalProps } = service;
+  if (service && service.length > 0) {
+    document.service = service;
+  } else if (services && services.length > 0) {
+    // Legacy support
+    document.service = services.map(s => {
+      const { id, type, serviceEndpoint, ...additionalProps } = s;
       return {
         id: id.startsWith('#') ? `${did}${id}` : id,
         type,

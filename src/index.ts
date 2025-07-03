@@ -23,10 +23,10 @@ export type {
   DIDDocument,
   VerificationMethod,
   ServiceEndpoint
-} from './types.js';
+} from './types';
 
 // Export error class
-export { DIDError } from './types.js';
+export { DIDError } from './types';
 
 // Export utilities
 export {
@@ -37,7 +37,7 @@ export {
   extractMethod,
   extractIdentifier,
   normalizeDID
-} from './utils.js';
+} from './utils';
 
 // Export creators
 export {
@@ -46,7 +46,7 @@ export {
   createDIDWeb,
   createDIDSynet,
   createDIDDocument
-} from './create.js';
+} from './create';
 
 // Import functions for default export
 import {
@@ -55,7 +55,7 @@ import {
   createDIDWeb,
   createDIDSynet,
   createDIDDocument
-} from './create.js';
+} from './create';
 
 import {
   parseDID,
@@ -64,7 +64,7 @@ import {
   extractMethod,
   extractIdentifier,
   normalizeDID
-} from './utils.js';
+} from './utils';
 
 // Version export
 export const VERSION = '1.0.0';

@@ -13,7 +13,7 @@ import {
   createDIDDocument,
   isDID,
   DIDError
-} from '../src/index.js';
+} from '../src/index';
 
 describe('DID Creation', () => {
   describe('createDIDKey', () => {

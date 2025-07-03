@@ -4,7 +4,6 @@
   "description": "Simple, dependency-free DID library for Synet network. Create and manipulate Decentralized Identifiers with support for did:key, did:web, and did:synet methods.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "files": [
     "dist",
     "README.md",
@@ -18,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/synthetism/synet.git",
+    "url": "git+https://github.com/synthetism/did.git",
     "directory": "packages/did"
   },
   "scripts": {

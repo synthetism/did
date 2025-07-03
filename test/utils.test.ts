@@ -14,7 +14,7 @@ import {
   extractIdentifier,
   normalizeDID,
   DIDError
-} from '../src/index.js';
+} from '../src/index';
 
 describe('DID Utils', () => {
   describe('parseDID', () => {
