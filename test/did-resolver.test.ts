@@ -50,7 +50,8 @@ describe('DID Resolver Compatibility', () => {
 
   describe('DID Document Structure Validation', () => {
     it('should create did:key documents that follow DID Core spec', async () => {
-      const did = createDIDKey();
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDIDKey(publicKeyHex, "Ed25519");
       const doc = createDIDDocument(did);
       
       // Validate basic structure
@@ -64,7 +65,7 @@ describe('DID Resolver Compatibility', () => {
       // Test with mock resolver
       const result = await mockResolver.resolve(did);
       expect(result.didDocument).toBeDefined();
-      expect(result.didDocument.id).toBe(did);
+      expect(result.didDocument?.id).toBe(did);
     });
 
     it('should create did:web documents that follow DID Core spec', async () => {
@@ -79,11 +80,13 @@ describe('DID Resolver Compatibility', () => {
       // Test with mock resolver
       const result = await mockResolver.resolve(did);
       expect(result.didDocument).toBeDefined();
-      expect(result.didDocument.id).toBe(did);
+      if (result.didDocument) {
+        expect(result.didDocument.id).toBe(did);
+      }
     });
 
     it('should create did:synet documents that follow DID Core spec', async () => {
-      const did = createDIDSynet();
+      const did = createDIDSynet("test-synet-identifier-12345");
       const doc = createDIDDocument(did);
       
       // Validate basic structure
@@ -94,13 +97,16 @@ describe('DID Resolver Compatibility', () => {
       // Test with mock resolver
       const result = await mockResolver.resolve(did);
       expect(result.didDocument).toBeDefined();
-      expect(result.didDocument.id).toBe(did);
+      if (result.didDocument) {
+        expect(result.didDocument.id).toBe(did);
+      }
     });
   });
 
   describe('Verification Method Compatibility', () => {
     it('should create verification methods compatible with did-resolver', async () => {
-      const did = createDIDKey();
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDIDKey(publicKeyHex, "Ed25519");
       const doc = createDIDDocument(did, {
         verificationMethod: {
           id: `${did}#key-1`,
@@ -125,7 +131,7 @@ describe('DID Resolver Compatibility', () => {
 
   describe('Service Endpoint Compatibility', () => {
     it('should create service endpoints compatible with did-resolver', async () => {
-      const did = createDIDSynet();
+      const did = createDIDSynet("test-service-identifier-12345");
       const doc = createDIDDocument(did, {
         service: [{
           id: `${did}#service-1`,
@@ -148,7 +154,8 @@ describe('DID Resolver Compatibility', () => {
 
   describe('Context Validation', () => {
     it('should include required DID context', () => {
-      const did = createDIDKey();
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDIDKey(publicKeyHex, "Ed25519");
       const doc = createDIDDocument(did);
       
       expect(doc['@context']).toBeDefined();
@@ -159,7 +166,8 @@ describe('DID Resolver Compatibility', () => {
     });
 
     it('should support additional contexts', () => {
-      const did = createDIDKey();
+      const publicKeyHex = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+      const did = createDIDKey(publicKeyHex, "X25519");
       const doc = createDIDDocument(did, {
         '@context': ['https://www.w3.org/ns/did/v1', 'https://w3id.org/security/suites/ed25519-2020/v1']
       });

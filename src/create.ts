@@ -14,7 +14,15 @@ import { DIDError } from "./types";
 import { validateDID } from "./utils";
 
 /**
- * Generate cryptographically secure random bytes
+ * Ge  const did = `did:synet:${identifier}`;
+
+  // Validate the constructed DID
+  const validation = validateDID(did);
+  if (!validation.isValid) {
+    throw new DIDError(`Failed to create valid did:synet: ${validation.error}`);
+  }
+
+  return did;yptographically secure random bytes
  *
  * @param length - Number of bytes to generate
  * @returns Uint8Array of random bytes
@@ -87,6 +95,40 @@ function encodeBase58(buffer: Uint8Array): string {
 }
 
 /**
+ * Multicodec codes for key types
+ */
+const MULTICODEC_CODES = {
+  "ed25519-pub": new Uint8Array([0xed, 0x01]),
+  "secp256k1-pub": new Uint8Array([0xe7, 0x01]), 
+  "x25519-pub": new Uint8Array([0xec, 0x01]),
+} as const;
+
+/**
+ * Encode bytes as multibase with multicodec prefix
+ *
+ * @param bytes - Bytes to encode
+ * @param codec - Multicodec identifier
+ * @returns Multibase encoded string with 'z' prefix (base58btc)
+ */
+function encodeMultibase(
+  bytes: Uint8Array, 
+  codec: keyof typeof MULTICODEC_CODES
+): string {
+  const codecBytes = MULTICODEC_CODES[codec];
+  if (!codecBytes) {
+    throw new Error(`Unknown codec: ${codec}`);
+  }
+  
+  // Combine multicodec prefix with key bytes
+  const combined = new Uint8Array(codecBytes.length + bytes.length);
+  combined.set(codecBytes, 0);
+  combined.set(bytes, codecBytes.length);
+  
+  // Encode as base58btc (prefix 'z')
+  return `z${encodeBase58(combined)}`;
+}
+
+/**
  * Generate a cryptographically secure random identifier
  *
  * @param length - Length in bytes (not characters)
@@ -98,29 +140,93 @@ function generateSecureIdentifier(length = 32): string {
 }
 
 /**
- * Create a did:key DID
+ * Generate a simple random identifier (for backwards compatibility)
  *
- * @param options - Creation options
+ * @param length - Length of the identifier in characters
+ * @returns Random identifier string
+ */
+function generateIdentifier(length = 32): string {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+
+  // Simple fallback to Math.random for now
+  // In a real implementation, we'd use proper cryptographic randomness
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return result;
+}
+
+/**
+ * Create a did:key DID from a public key
+ *
+ * @param publicKeyHex - The public key in hex format (required for did:key)
+ * @param keyType - The type of key (Ed25519, secp256k1, or X25519)
  * @returns DID string
  */
 export function createDIDKey(
-  options: { publicKey?: string; keyType?: "Ed25519" | "secp256k1" } = {},
+  publicKeyHex: string,
+  keyType: "Ed25519" | "secp256k1" | "X25519" = "Ed25519",
 ): string {
-  const { publicKey, keyType = "Ed25519" } = options;
-
-  let identifier: string;
-
-  if (publicKey) {
-    // Use provided public key as identifier
-    identifier = publicKey;
-  } else {
-    // Generate a cryptographically secure identifier
-    // For did:key, we use base58 encoding which is more appropriate
-    const secureId = generateSecureIdentifier(32);
-    identifier = `${keyType.toLowerCase()}-${secureId}`;
+  if (!publicKeyHex || typeof publicKeyHex !== "string") {
+    throw new DIDError("Public key is required for did:key creation");
   }
 
-  const did = `did:key:${identifier}`;
+  // Remove 0x prefix if present
+  const cleanHex = publicKeyHex.startsWith("0x") 
+    ? publicKeyHex.slice(2) 
+    : publicKeyHex;
+
+  // Validate hex format
+  if (!/^[0-9a-fA-F]+$/.test(cleanHex)) {
+    throw new DIDError("Invalid public key hex format");
+  }
+
+  // Convert hex to bytes
+  const publicKeyBytes = new Uint8Array(
+    cleanHex.match(/.{1,2}/g)?.map(byte => Number.parseInt(byte, 16)) || []
+  );
+
+  // Create multibase-encoded identifier based on key type
+  let methodSpecificId: string;
+  
+  try {
+    switch (keyType) {
+      case "Ed25519":
+        // Ed25519 public keys are 32 bytes
+        if (publicKeyBytes.length !== 32) {
+          throw new DIDError("Ed25519 public key must be 32 bytes");
+        }
+        methodSpecificId = encodeMultibase(publicKeyBytes, "ed25519-pub");
+        break;
+        
+      case "secp256k1":
+        // secp256k1 public keys can be 33 bytes (compressed) or 65 bytes (uncompressed)
+        if (publicKeyBytes.length !== 33 && publicKeyBytes.length !== 65) {
+          throw new DIDError("secp256k1 public key must be 33 or 65 bytes");
+        }
+        methodSpecificId = encodeMultibase(publicKeyBytes, "secp256k1-pub");
+        break;
+        
+      case "X25519":
+        // X25519 public keys are 32 bytes
+        if (publicKeyBytes.length !== 32) {
+          throw new DIDError("X25519 public key must be 32 bytes");
+        }
+        methodSpecificId = encodeMultibase(publicKeyBytes, "x25519-pub");
+        break;
+        
+      default:
+        throw new DIDError(`Unsupported key type: ${keyType}`);
+    }
+  } catch (error) {
+    if (error instanceof DIDError) throw error;
+    throw new DIDError(`Failed to encode public key: ${error}`);
+  }
+
+  const did = `did:key:${methodSpecificId}`;
 
   // Validate the created DID
   const validation = validateDID(did);
@@ -170,17 +276,19 @@ export function createDIDWeb(domain: string, path?: string): string {
 /**
  * Create a did:synet DID
  *
- * @param identifier - Optional identifier, will be generated if not provided
+ * @param identifier - Required identifier for the DID
  * @returns DID string
  */
-export function createDIDSynet(identifier?: string): string {
-  const id = identifier || generateSecureIdentifier(32); // Use secure generation
+export function createDIDSynet(identifier: string): string {
+  if (!identifier || typeof identifier !== "string") {
+    throw new DIDError("Identifier is required for did:synet creation");
+  }
 
-  if (id.length < 8) {
+  if (identifier.length < 8) {
     throw new DIDError("Synet DID identifier must be at least 8 characters");
   }
 
-  const did = `did:synet:${id}`;
+  const did = `did:synet:${identifier}`;
 
   // Validate the created DID
   const validation = validateDID(did);
@@ -200,10 +308,13 @@ export function createDIDSynet(identifier?: string): string {
 export function createDID(options: DIDCreateOptions): string {
   switch (options.method) {
     case "key":
-      return createDIDKey({
-        publicKey: options.publicKey,
-        keyType: options.keyType,
-      });
+      if (!options.publicKey) {
+        throw new DIDError("publicKey is required for did:key creation");
+      }
+      return createDIDKey(
+        options.publicKey,
+        options.keyType as "Ed25519" | "secp256k1" | "X25519"
+      );
 
     case "web":
       if (!options.identifier) {
@@ -212,6 +323,9 @@ export function createDID(options: DIDCreateOptions): string {
       return createDIDWeb(options.identifier);
 
     case "synet":
+      if (!options.identifier) {
+        throw new DIDError("identifier is required for did:synet creation");
+      }
       return createDIDSynet(options.identifier);
 
     default:

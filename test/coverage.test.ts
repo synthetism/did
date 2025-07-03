@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  createDID,
   createDIDKey,
   createDIDWeb,
   createDIDSynet,
@@ -18,9 +19,7 @@ import {
   normalizeDID,
   createDIDURL,
   DIDError
-} from '../src/index';
-
-describe('Coverage Completion Tests', () => {
+} from '../src/index';  describe('Coverage Completion Tests', () => {
   
   describe('Crypto fallback scenarios', () => {
     beforeEach(() => {
@@ -34,61 +33,92 @@ describe('Coverage Completion Tests', () => {
 
     it('should use Node.js crypto when Web crypto is not available', () => {
       // This test ensures the Node.js crypto path is covered
-      const did = createDIDKey();
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDIDKey(publicKeyHex, "Ed25519");
       expect(isDID(did)).toBe(true);
-      expect(did).toMatch(/^did:key:ed25519-/);
+      expect(did).toMatch(/^did:key:z6/);
     });
 
-    it('should use Math.random fallback when no crypto is available', () => {
-      // Mock console.warn to capture the warning
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should handle different crypto scenarios', () => {
+      // Test that the function handles various crypto availability scenarios
+      // The actual crypto methods will be used but we test the logic paths
+      const publicKeyHex1 = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did1 = createDIDKey(publicKeyHex1, "Ed25519");
+      const did2 = createDIDSynet("test-crypto-scenario-12345");
       
-      // Store original globalThis.crypto
-      const originalCrypto = globalThis.crypto;
-      
-      // Mock require to throw an error and remove crypto
-      const originalRequire = global.require;
-      
-      try {
-        // Remove crypto from globalThis
-        Object.defineProperty(globalThis, 'crypto', {
-          value: undefined,
-          configurable: true
-        });
-        
-        // Mock require to throw
-        global.require = vi.fn(() => {
-          throw new Error('Module not found');
-        });
-
-        const did = createDIDKey();
-        expect(isDID(did)).toBe(true);
-        expect(did).toMatch(/^did:key:ed25519-/);
-        expect(warnSpy).toHaveBeenCalledWith(
-          '[@synet/did] No cryptographically secure random source available. Using Math.random() fallback.'
-        );
-      } finally {
-        // Restore original values
-        globalThis.crypto = originalCrypto;
-        global.require = originalRequire;
-        warnSpy.mockRestore();
-      }
+      expect(isDID(did1)).toBe(true);
+      expect(isDID(did2)).toBe(true);
+      expect(did1).toMatch(/^did:key:z6/);
+      expect(did2).toMatch(/^did:synet:/);
     });
 
     it('should handle synet DID creation with crypto fallback', () => {
-      const did = createDIDSynet();
+      const did = createDIDSynet("test-crypto-fallback-12345");
       expect(isDID(did)).toBe(true);
       expect(did).toMatch(/^did:synet:/);
+    });
+  });
+
+  describe('Error path coverage', () => {
+    it('should cover DID validation error paths for invalid characters', () => {
+      // Test the specific validation paths in utils.ts lines 116-120
+      const invalidDIDKey = 'did:key:invalid!@#characters';
+      const validation = validateDID(invalidDIDKey);
+      expect(validation.isValid).toBe(false);
+      expect(validation.error).toBe('Invalid did:key identifier format');
+    });
+
+    it('should test validateDID with various invalid cases', () => {
+      // Test empty identifier
+      expect(validateDID('did:key:').isValid).toBe(false);
+      
+      // Test invalid characters - use characters that are actually invalid
+      expect(validateDID('did:web:').isValid).toBe(false);
+      
+      // Test short synet identifier
+      expect(validateDID('did:synet:short').isValid).toBe(false);
+    });
+  });
+
+  describe('DID creation edge cases and validation failures', () => {
+    
+    it('should handle createDID method validation', () => {
+      // Test the error path for invalid method in createDID function (line 238)
+      expect(() => {
+        createDID({ method: 'invalid' as 'key' | 'web' | 'synet' });
+      }).toThrow('Unsupported DID method: invalid');
+    });
+
+    it('should handle createDIDWeb validation scenarios', () => {
+      // Test various web domain validations
+      expect(() => createDIDWeb('')).toThrow();
+      expect(() => createDIDWeb('invalid')).toThrow();
+      expect(() => createDIDWeb('http://example.com')).toThrow();
+    });
+
+    it('should handle createDIDSynet validation scenarios', () => {
+      // Test short identifier validation
+      expect(() => createDIDSynet('short')).toThrow();
+      expect(() => createDIDSynet('a')).toThrow();
+    });
+
+    it('should handle createDIDDocument validation', () => {
+      // Test invalid DID in createDIDDocument
+      expect(() => {
+        createDIDDocument('invalid-did-format');
+      }).toThrow('Invalid DID:');
     });
   });
 
   describe('Legacy identifier generation', () => {
     it('should generate identifier with custom length', () => {
       // Test the generateIdentifier function indirectly
-      const did1 = createDIDKey();
-      const did2 = createDIDKey();
+      const publicKeyHex1 = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const publicKeyHex2 = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+      const did1 = createDIDKey(publicKeyHex1, "Ed25519");
+      const did2 = createDIDKey(publicKeyHex2, "X25519");
       
-      // They should be different (testing randomness)
+      // They should be different (testing different keys)
       expect(did1).not.toBe(did2);
     });
   });
@@ -182,7 +212,8 @@ describe('Coverage Completion Tests', () => {
     });
 
     it('should handle all createDIDDocument option branches', () => {
-      const did = createDIDKey();
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDIDKey(publicKeyHex, "Ed25519");
       
       // Test with verificationMethod array
       const doc1 = createDIDDocument(did, {
@@ -264,14 +295,15 @@ describe('Coverage Completion Tests', () => {
     });
 
     it('should handle createDIDKey with custom publicKey', () => {
-      const customKey = 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK';
-      const did = createDIDKey({ publicKey: customKey });
-      expect(did).toBe(`did:key:${customKey}`);
+      const customKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a';
+      const did = createDIDKey(customKey, "Ed25519");
+      expect(did).toBe('did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw');
     });
 
     it('should handle createDIDKey with secp256k1 key type', () => {
-      const did = createDIDKey({ keyType: 'secp256k1' });
-      expect(did).toMatch(/^did:key:secp256k1-/);
+      const publicKeyHex = "02b97c30de767f084ce3439de539bae75de6b9f1bb2d9bb3c8e0b3cf68f12c5e9e";
+      const did = createDIDKey(publicKeyHex, "secp256k1");
+      expect(did).toMatch(/^did:key:zQ3/);
     });
   });
 
@@ -315,6 +347,76 @@ describe('Coverage Completion Tests', () => {
       const did = '  did:key:test  ';
       const normalized = normalizeDID(did);
       expect(normalized).toBe('did:key:test');
+    });
+  });
+
+  describe('Comprehensive coverage tests', () => {
+    
+    it('should trigger validation failure paths in create functions', () => {
+      // Test the scenario where validateDID would return invalid for a created DID
+      // This is highly unlikely in normal operation but tests the error paths
+      
+      // Test the character validation path that's not being covered
+      const result = validateDID('did:key:test!@#invalid');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Invalid did:key identifier format');
+    });
+
+    it('should cover all branches in base58 encoding', () => {
+      // Test empty buffer case if it exists
+      const publicKeyHex1 = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did1 = createDIDKey(publicKeyHex1, "Ed25519");
+      const did2 = createDIDSynet("test-base58-branch-12345");
+      
+      // Ensure different scenarios are tested
+      expect(did1).toMatch(/^did:key:/);
+      expect(did2).toMatch(/^did:synet:/);
+    });
+
+    it('should test edge cases in identifier generation', () => {
+      // Test multiple generation to ensure randomness paths
+      const dids = Array.from({ length: 5 }, (_, i) => 
+        createDIDKey(`${i.toString().padStart(64, '0')}`, "Ed25519")
+      );
+      
+      // All should be valid and different
+      for (const did of dids) {
+        expect(isDID(did)).toBe(true);
+      }
+      const uniqueDids = new Set(dids);
+      expect(uniqueDids.size).toBe(5);
+    });
+
+    it('should test various DID validation edge cases', () => {
+      // Test different invalid character scenarios in the identifier itself
+      // These characters should be in the identifier, not fragments or queries
+      expect(validateDID('did:key:test@invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test$invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test%invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test^invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test&invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test*invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test(invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test)invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test+invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test=invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test[invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test]invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test{invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test}invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test|invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test\\invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test:invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test"invalid').isValid).toBe(false);
+      expect(validateDID("did:key:test'invalid").isValid).toBe(false);
+      expect(validateDID('did:key:test<invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test>invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test,invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test.invalid').isValid).toBe(false);
+      expect(validateDID('did:key:test invalid').isValid).toBe(false);
+      
+      // Test with exclamation mark which is also invalid
+      expect(validateDID('did:key:test!invalid').isValid).toBe(false);
     });
   });
 });

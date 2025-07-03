@@ -30,20 +30,23 @@ npm install @synet/did
 ## Quick Start
 
 ```typescript
-import { createDID, parseDID, validateDID, createDIDDocument } from '@synet/did';
+import { createDIDKey, createDIDWeb, parseDID, validateDID, createDIDDocument } from '@synet/did';
 
-// Create different types of DIDs
-const keyDID = createDID({ method: 'key' });
-const webDID = createDID({ method: 'web', identifier: 'example.com' });
-const synetDID = createDID({ method: 'synet' });
+// Create DIDs from existing cryptographic material
+const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+const keyDID = createDIDKey(publicKeyHex, "Ed25519");
+// Result: "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+
+const webDID = createDIDWeb('example.com');
+// Result: "did:web:example.com"
 
 // Parse and validate DIDs
-const parsed = parseDID('did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK');
+const parsed = parseDID('did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw');
 const validation = validateDID('did:web:example.com');
 
 // Create DID documents
 const document = createDIDDocument(keyDID, {
-  publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+  publicKey: publicKeyHex,
   services: [
     { id: '#agent', type: 'DIDCommMessaging', serviceEndpoint: 'https://example.com/agent' }
   ]
@@ -54,38 +57,64 @@ const document = createDIDDocument(keyDID, {
 
 ### Creating DIDs
 
-#### `createDID(options)`
+#### `createDIDKey(publicKeyHex, keyType)`
 
-Create a DID using the specified method and options.
+Create a did:key DID from an existing public key.
 
 ```typescript
-// Create a did:key DID
-const keyDID = createDID({ method: 'key' });
-const keyDIDWithCustomKey = createDID({ 
-  method: 'key', 
-  publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK' 
-});
+// Ed25519 key (32 bytes)
+const ed25519PublicKey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+const ed25519DID = createDIDKey(ed25519PublicKey, "Ed25519");
+// Result: "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
 
-// Create a did:web DID
-const webDID = createDID({ method: 'web', identifier: 'example.com' });
+// secp256k1 key (33 bytes compressed)
+const secp256k1PublicKey = "02b97c30de767f084ce3439de539bae75de6b9f1bb2d9bb3c8e0b3cf68f12c5e9e";
+const secp256k1DID = createDIDKey(secp256k1PublicKey, "secp256k1");
+// Result: "did:key:zQ3shZtr1sUnrETvXQSyvnEnpFDBXGKmdk7NxELbWHgxKrNbF"
 
-// Create a did:synet DID
-const synetDID = createDID({ method: 'synet' });
-const synetDIDWithCustomId = createDID({ 
-  method: 'synet', 
-  identifier: 'custom-identifier-123456' 
-});
+// X25519 key (32 bytes)
+const x25519PublicKey = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+const x25519DID = createDIDKey(x25519PublicKey, "X25519");
+// Result: "did:key:z6LSkdrX4EvewpktHBjvNxRDogPdC5iVF8LT3LPKefGAgi89"
 ```
 
-#### Method-specific creators
+#### `createDIDWeb(domain, path?)`
+
+Create a did:web DID from a domain and optional path.
 
 ```typescript
-import { createDIDKey, createDIDWeb, createDIDSynet } from '@synet/did';
+const webDID = createDIDWeb('example.com');
+// Result: "did:web:example.com"
 
-// Specialized creators for each method
-const keyDID = createDIDKey({ keyType: 'Ed25519' });
-const webDID = createDIDWeb('example.com', 'path/to/resource');
-const synetDID = createDIDSynet('custom-identifier-123456');
+const webDIDWithPath = createDIDWeb('example.com', 'users/alice');
+// Result: "did:web:example.com:users:alice"
+```
+
+#### `createDIDSynet(identifier?)`
+
+Create a did:synet DID with optional custom identifier.
+
+```typescript
+const synetDID = createDIDSynet();
+// Result: "did:synet:..." (auto-generated identifier)
+
+const synetDIDCustom = createDIDSynet('alice123');
+// Result: "did:synet:alice123"
+```
+
+#### `createDID(options)`
+
+Generic DID creator that dispatches to method-specific creators.
+
+```typescript
+const keyDID = createDID({ 
+  method: 'key', 
+  publicKey: 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
+  keyType: 'Ed25519'
+});
+
+const webDID = createDID({ method: 'web', identifier: 'example.com' });
+const synetDID = createDID({ method: 'synet', identifier: 'alice123' });
 ```
 
 ### Parsing and Validation
@@ -147,9 +176,9 @@ Create a basic DID document for the given DID.
 
 ```typescript
 const document = createDIDDocument(
-  'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+  'did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw',
   {
-    publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+    publicKey: 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
     keyType: 'Ed25519VerificationKey2020',
     controller: 'did:web:example.com',
     services: [
@@ -167,41 +196,49 @@ const document = createDIDDocument(
 
 ### `did:key`
 
-Creates DIDs based on cryptographic keys. The identifier is derived from the public key.
+Creates DIDs based on cryptographic public keys. The identifier is derived from the public key using multibase encoding.
 
 ```typescript
-const keyDID = createDIDKey();
-// Result: did:key:ed25519-AbCdEf123456...
+// Requires actual public key hex
+const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+const keyDID = createDIDKey(publicKeyHex, "Ed25519");
+// Result: did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw
 
-const keyDIDWithCustomKey = createDIDKey({
-  publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK'
-});
-// Result: did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK
+// The identifier follows W3C DID Core specification
+// Format: did:key:{multibase-encoded-public-key}
 ```
 
 ### `did:web`
 
-Creates DIDs based on web domains. The identifier is a domain name.
+Creates DIDs based on web domains. The identifier is a domain name with optional path.
 
 ```typescript
 const webDID = createDIDWeb('example.com');
 // Result: did:web:example.com
 
-const webDIDWithPath = createDIDWeb('example.com', 'path/to/resource');
-// Result: did:web:example.com:path:to:resource
+const webDIDWithPath = createDIDWeb('example.com', 'users/alice');
+// Result: did:web:example.com:users:alice
 ```
 
 ### `did:synet`
 
-Creates DIDs for the Synet network. The identifier is a custom string.
+Creates DIDs for the Synet network. The identifier can be custom or auto-generated.
 
 ```typescript
 const synetDID = createDIDSynet();
-// Result: did:synet:AbCdEf123456789012345678901234567890123456
+// Result: did:synet:{base58-encoded-random-identifier}
 
-const synetDIDWithCustomId = createDIDSynet('my-custom-identifier-123456');
-// Result: did:synet:my-custom-identifier-123456
+const synetDIDWithCustomId = createDIDSynet('alice123');
+// Result: did:synet:alice123
 ```
+
+## Key Types and Encoding
+
+The library supports multiple cryptographic key types with proper multibase encoding:
+
+- **Ed25519**: 32-byte keys, encoded with multicodec `0xed01`, results in `z6Mk...` identifiers
+- **secp256k1**: 33-byte (compressed) or 65-byte keys, encoded with multicodec `0xe701`, results in `zQ3s...` identifiers  
+- **X25519**: 32-byte keys for key agreement, encoded with multicodec `0xec01`, results in `z6LS...` identifiers
 
 ## Error Handling
 

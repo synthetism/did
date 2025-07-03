@@ -130,8 +130,8 @@ export interface DIDDocument {
 export interface DIDCreateOptions {
   method: DIDMethod;
   identifier?: string;
-  publicKey?: string;
-  keyType?: "Ed25519" | "secp256k1";
+  publicKey?: string; // Required for did:key method
+  keyType?: "Ed25519" | "secp256k1" | "X25519";
 }
 
 /**

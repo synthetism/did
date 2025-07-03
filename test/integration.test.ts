@@ -21,7 +21,12 @@ describe('Integration Tests', () => {
   describe('Full DID workflow', () => {
     it('should create, parse, validate, and document a did:key', () => {
       // Create a DID
-      const did = createDID({ method: 'key', keyType: 'Ed25519' });
+      const publicKeyHex = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+      const did = createDID({ 
+        method: 'key', 
+        keyType: 'Ed25519',
+        publicKey: publicKeyHex
+      });
       
       // Verify it's a valid DID
       expect(isDID(did)).toBe(true);
@@ -92,11 +97,11 @@ describe('Integration Tests', () => {
 
     it('should create, parse, validate, and document a did:synet', () => {
       // Create a DID
-      const did = createDID({ method: 'synet' });
+      const did = createDID({ method: 'synet', identifier: 'test-synet-integration-identifier-123456789' });
       
       // Verify it's a valid DID
       expect(isDID(did)).toBe(true);
-      expect(did).toMatch(/^did:synet:[a-zA-Z0-9]{32,50}$/);
+      expect(did).toBe('did:synet:test-synet-integration-identifier-123456789');
       
       // Parse the DID
       const parsed = parseDID(did);
@@ -214,7 +219,15 @@ describe('Integration Tests', () => {
       
       // Create 100 DIDs and ensure they're all unique
       for (let i = 0; i < 100; i++) {
-        const did = createDID({ method: 'key' });
+        // Generate a unique public key for each DID (32 bytes = 64 hex chars)
+        const publicKeyHex = Array.from({ length: 64 }, () => 
+          Math.floor(Math.random() * 16).toString(16)
+        ).join('');
+        const did = createDID({ 
+          method: 'key', 
+          publicKey: publicKeyHex, 
+          keyType: 'Ed25519' 
+        });
         expect(dids.has(did)).toBe(false);
         dids.add(did);
         expect(isDID(did)).toBe(true);
