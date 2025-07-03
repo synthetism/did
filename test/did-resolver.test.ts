@@ -11,8 +11,7 @@ import {
   createDID,
   createDIDDocument,
   createDIDKey,
-  createDIDWeb,
-  createDIDSynet
+  createDIDWeb
 } from '../src/index';
 
 describe('DID Resolver Compatibility', () => {
@@ -30,15 +29,6 @@ describe('DID Resolver Compatibility', () => {
     },
     web: async (did: string) => {
       // For did:web, we simulate resolution
-      const doc = createDIDDocument(did);
-      return {
-        didDocument: doc,
-        didResolutionMetadata: {},
-        didDocumentMetadata: {}
-      };
-    },
-    synet: async (did: string) => {
-      // For did:synet, we simulate resolution
       const doc = createDIDDocument(did);
       return {
         didDocument: doc,
@@ -84,23 +74,6 @@ describe('DID Resolver Compatibility', () => {
         expect(result.didDocument.id).toBe(did);
       }
     });
-
-    it('should create did:synet documents that follow DID Core spec', async () => {
-      const did = createDIDSynet("test-synet-identifier-12345");
-      const doc = createDIDDocument(did);
-      
-      // Validate basic structure
-      expect(doc.id).toBe(did);
-      expect(doc['@context']).toBeDefined();
-      expect(doc.id).toMatch(/^did:synet:/);
-      
-      // Test with mock resolver
-      const result = await mockResolver.resolve(did);
-      expect(result.didDocument).toBeDefined();
-      if (result.didDocument) {
-        expect(result.didDocument.id).toBe(did);
-      }
-    });
   });
 
   describe('Verification Method Compatibility', () => {
@@ -131,7 +104,7 @@ describe('DID Resolver Compatibility', () => {
 
   describe('Service Endpoint Compatibility', () => {
     it('should create service endpoints compatible with did-resolver', async () => {
-      const did = createDIDSynet("test-service-identifier-12345");
+      const did = createDIDWeb("example.com");
       const doc = createDIDDocument(did, {
         service: [{
           id: `${did}#service-1`,

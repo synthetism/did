@@ -8,9 +8,9 @@
  */
 
 /**
- * Supported DID methods
+ * Supported DID methods for production use
  */
-export type DIDMethod = "key" | "web" | "synet";
+export type DIDMethod = "key" | "web";
 
 /**
  * DID URL components
@@ -129,9 +129,10 @@ export interface DIDDocument {
  */
 export interface DIDCreateOptions {
   method: DIDMethod;
-  identifier?: string;
   publicKey?: string; // Required for did:key method
-  keyType?: "Ed25519" | "secp256k1" | "X25519";
+  keyType?: "ed25519-pub" | "secp256k1-pub" | "x25519-pub" | "Ed25519" | "secp256k1" | "X25519"; // Support legacy names
+  domain?: string; // Required for did:web method
+  path?: string; // Optional path for did:web
 }
 
 /**

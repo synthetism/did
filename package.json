@@ -1,7 +1,7 @@
 {
   "name": "@synet/did",
   "version": "1.0.0",
-  "description": "Simple, dependency-free DID library for Synet network. Create and manipulate Decentralized Identifiers with support for did:key, did:web, and did:synet methods.",
+  "description": "Secure, minimal, standards-compliant DID library for production environments. Supports did:key and did:web methods with strict validation and cryptographic security.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -57,11 +57,13 @@
     "decentralized-identifier",
     "identity",
     "web3",
-    "synet",
-    "blockchain",
     "cryptography",
     "authentication",
-    "verification"
+    "verification",
+    "ssi",
+    "self-sovereign-identity",
+    "security",
+    "production"
   ],
   "author": "Synet Team",
   "homepage": "https://synet.ai",

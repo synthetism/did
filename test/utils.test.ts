@@ -39,15 +39,6 @@ describe('DID Utils', () => {
       expect(result.components.identifier).toBe('example.com');
     });
 
-    it('should parse a valid did:synet DID', () => {
-      const did = 'did:synet:abcdef123456';
-      const result = parseDID(did);
-      
-      expect(result.isValid).toBe(true);
-      expect(result.components.method).toBe('synet');
-      expect(result.components.identifier).toBe('abcdef123456');
-    });
-
     it('should parse DID with path', () => {
       const did = 'did:web:example.com/path/to/resource';
       const result = parseDID(did);
@@ -141,8 +132,7 @@ describe('DID Utils', () => {
     it('should validate supported DID methods', () => {
       const validDIDs = [
         'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
-        'did:web:example.com',
-        'did:synet:abcdef123456'
+        'did:web:example.com'
       ];
 
       for (const did of validDIDs) {
@@ -172,12 +162,6 @@ describe('DID Utils', () => {
         expect(result.isValid).toBe(false);
         expect(result.error).toBe('did:web identifier must be a valid domain name');
       }
-    });
-
-    it('should validate did:synet identifier length', () => {
-      const result = validateDID('did:synet:short');
-      expect(result.isValid).toBe(false);
-      expect(result.error).toBe('did:synet identifier must be at least 8 characters');
     });
 
     it('should validate did:key identifier format', () => {
@@ -278,8 +262,7 @@ describe('DID Utils', () => {
     it('should return true for valid DIDs', () => {
       const validDIDs = [
         'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
-        'did:web:example.com',
-        'did:synet:abcdef123456'
+        'did:web:example.com'
       ];
 
       for (const did of validDIDs) {
@@ -293,8 +276,7 @@ describe('DID Utils', () => {
         'not-a-did',
         'did:',
         'did:key',
-        'http://example.com',
-        'did:synet:short'
+        'http://example.com'
       ];
 
       for (const did of invalidDIDs) {
@@ -307,7 +289,7 @@ describe('DID Utils', () => {
     it('should extract method from valid DIDs', () => {
       expect(extractMethod('did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK')).toBe('key');
       expect(extractMethod('did:web:example.com')).toBe('web');
-      expect(extractMethod('did:synet:abcdef123456')).toBe('synet');
+      expect(extractMethod('did:example:123456')).toBe('example');
     });
 
     it('should return null for invalid DIDs', () => {
@@ -321,7 +303,7 @@ describe('DID Utils', () => {
     it('should extract identifier from valid DIDs', () => {
       expect(extractIdentifier('did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK')).toBe('z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK');
       expect(extractIdentifier('did:web:example.com')).toBe('example.com');
-      expect(extractIdentifier('did:synet:abcdef123456')).toBe('abcdef123456');
+      expect(extractIdentifier('did:example:123456')).toBe('123456');
     });
 
     it('should return null for invalid DIDs', () => {

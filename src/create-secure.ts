@@ -11,9 +11,7 @@
  * - Standards-compliant multicodec encoding
  */
 
-import type { DIDCreateOptions, DIDDocument, VerificationMethod, Service } from "./types";
 import { DIDError } from "./types";
-import { validateDID } from "./utils";
 
 /**
  * Official multicodec codes from https://github.com/multiformats/multicodec
@@ -64,13 +62,21 @@ function encodeBase58(bytes: Uint8Array): string {
 }
 
 /**
+ * Encode unsigned varint (simplified for single bytes)
+ */
+function encodeVarint(value: number): Uint8Array {
+  if (value < 0 || value > 0x7f) {
+    throw new DIDError("Multicodec code must be single byte");
+  }
+  return new Uint8Array([value]);
+}
+
+/**
  * Create multibase-encoded string with multicodec prefix
  */
 function encodeMultibase(keyBytes: Uint8Array, keyType: KeyType): string {
   const codecCode = MULTICODEC_CODES[keyType];
-  
-  // For single-byte multicodec codes, we don't need varint encoding
-  const codecBytes = new Uint8Array([codecCode]);
+  const codecBytes = encodeVarint(codecCode);
   
   // Combine multicodec prefix with key bytes
   const combined = new Uint8Array(codecBytes.length + keyBytes.length);
@@ -109,7 +115,7 @@ function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(clean.length / 2);
   
   for (let i = 0; i < clean.length; i += 2) {
-    bytes[i / 2] = Number.parseInt(clean.substr(i, 2), 16);
+    bytes[i / 2] = parseInt(clean.substr(i, 2), 16);
   }
   
   return bytes;
@@ -161,37 +167,22 @@ function validateDomain(domain: string): void {
  * Create a did:key DID from a public key
  * 
  * @param publicKeyHex - Public key in hexadecimal format
- * @param keyType - Type of cryptographic key (legacy names supported)
+ * @param keyType - Type of cryptographic key
  * @returns Standards-compliant did:key DID
  */
 export function createDIDKey(
   publicKeyHex: string,
-  keyType: KeyType | "Ed25519" | "secp256k1" | "X25519" = "ed25519-pub"
+  keyType: KeyType = "ed25519-pub"
 ): string {
   if (!publicKeyHex || typeof publicKeyHex !== "string") {
     throw new DIDError("Public key is required");
   }
 
-  // Map legacy key types to new format
-  const keyTypeMap: Record<string, KeyType> = {
-    "Ed25519": "ed25519-pub",
-    "secp256k1": "secp256k1-pub", 
-    "X25519": "x25519-pub",
-    "ed25519-pub": "ed25519-pub",
-    "secp256k1-pub": "secp256k1-pub",
-    "x25519-pub": "x25519-pub"
-  };
-
-  const normalizedKeyType = keyTypeMap[keyType];
-  if (!normalizedKeyType) {
-    throw new DIDError(`Unsupported key type: ${keyType}`);
-  }
-
   try {
     const keyBytes = hexToBytes(publicKeyHex);
-    validateKeyLength(keyBytes, normalizedKeyType);
+    validateKeyLength(keyBytes, keyType);
     
-    const multibaseId = encodeMultibase(keyBytes, normalizedKeyType);
+    const multibaseId = encodeMultibase(keyBytes, keyType);
     return `did:key:${multibaseId}`;
   } catch (error) {
     if (error instanceof DIDError) {
@@ -230,6 +221,17 @@ export function createDIDWeb(domain: string, path?: string): string {
 }
 
 /**
+ * Generic DID creation options
+ */
+export interface DIDCreateOptions {
+  method: "key" | "web";
+  publicKey?: string;
+  keyType?: KeyType;
+  domain?: string;
+  path?: string;
+}
+
+/**
  * Create a DID using the specified method
  * 
  * @param options - DID creation options
@@ -252,89 +254,61 @@ export function createDID(options: DIDCreateOptions): string {
     }
     
     default:
-      throw new DIDError(`Unsupported DID method: ${(options as { method: string }).method}`);
+      throw new DIDError(`Unsupported DID method: ${(options as any).method}`);
   }
 }
 
 /**
- * Create a basic DID document for a given DID
- *
- * @param did - DID string
- * @param options - Optional document options
- * @returns DID document
+ * Validate DID format
  */
-export function createDIDDocument(
-  did: string,
-  options: {
-    "@context"?: string | string[];
-    controller?: string;
-    verificationMethod?: VerificationMethod | VerificationMethod[];
-    authentication?: (string | VerificationMethod)[];
-    assertionMethod?: (string | VerificationMethod)[];
-    keyAgreement?: (string | VerificationMethod)[];
-    capabilityInvocation?: (string | VerificationMethod)[];
-    capabilityDelegation?: (string | VerificationMethod)[];
-    service?: Service[];
-  } = {},
-): DIDDocument {
-  const validation = validateDID(did);
-  if (!validation.isValid) {
-    throw new DIDError(`Invalid DID: ${validation.error}`);
+export function isDID(did: string): boolean {
+  if (!did || typeof did !== "string") {
+    return false;
   }
 
-  const {
-    "@context": contextOption,
-    controller,
-    verificationMethod,
-    authentication,
-    assertionMethod,
-    keyAgreement,
-    capabilityInvocation,
-    capabilityDelegation,
-    service,
-  } = options;
-
-  const document: DIDDocument = {
-    "@context": contextOption || [
-      "https://www.w3.org/ns/did/v1",
-      "https://w3id.org/security/suites/ed25519-2020/v1",
-    ],
-    id: did,
-    controller: controller || did,
-  };
-
-  // Add verification method if provided
-  if (verificationMethod) {
-    document.verificationMethod = Array.isArray(verificationMethod)
-      ? verificationMethod
-      : [verificationMethod];
+  // Basic DID format check
+  const didRegex = /^did:([a-z0-9]+):(.+)$/;
+  const match = did.match(didRegex);
+  
+  if (!match) {
+    return false;
   }
 
-  // Add capability sections if provided
-  if (authentication) {
-    document.authentication = authentication;
+  const [, method, identifier] = match;
+  
+  // Validate supported methods
+  if (!["key", "web"].includes(method)) {
+    return false;
   }
 
-  if (assertionMethod) {
-    document.assertionMethod = assertionMethod;
+  // Basic identifier validation
+  if (!identifier || identifier.length === 0) {
+    return false;
   }
 
-  if (keyAgreement) {
-    document.keyAgreement = keyAgreement;
-  }
+  return true;
+}
 
-  if (capabilityInvocation) {
-    document.capabilityInvocation = capabilityInvocation;
+/**
+ * Extract method from DID
+ */
+export function extractMethod(did: string): string | null {
+  if (!isDID(did)) {
+    return null;
   }
+  
+  const match = did.match(/^did:([a-z0-9]+):/);
+  return match ? match[1] : null;
+}
 
-  if (capabilityDelegation) {
-    document.capabilityDelegation = capabilityDelegation;
+/**
+ * Extract identifier from DID
+ */
+export function extractIdentifier(did: string): string | null {
+  if (!isDID(did)) {
+    return null;
   }
-
-  // Add services if provided
-  if (service && service.length > 0) {
-    document.service = service;
-  }
-
-  return document;
+  
+  const match = did.match(/^did:[a-z0-9]+:(.+)$/);
+  return match ? match[1] : null;
 }

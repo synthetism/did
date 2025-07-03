@@ -1,10 +1,12 @@
 /**
- * @synet/did - Simple DID library for Synet network
+ * @synet/did - Production DID Library
  *
- * A minimal, dependency-free library for creating and manipulating
- * Decentralized Identifiers (DIDs). This package provides:
+ * A secure, minimal, standards-compliant library for creating and manipulating
+ * Decentralized Identifiers (DIDs) in production environments. This package provides:
  *
- * - DID creation for did:key, did:web, and did:synet methods
+ * - DID creation for did:key and did:web methods only
+ * - Standards-compliant multicodec encoding
+ * - Strict input validation and security
  * - DID parsing and validation
  * - Basic DID document generation
  * - Type-safe interfaces and utilities
@@ -25,6 +27,9 @@ export type {
   ServiceEndpoint,
 } from "./types";
 
+// Export key type from create
+export type { KeyType } from "./create";
+
 // Export error class
 export { DIDError } from "./types";
 
@@ -44,7 +49,6 @@ export {
   createDID,
   createDIDKey,
   createDIDWeb,
-  createDIDSynet,
   createDIDDocument,
 } from "./create";
 
@@ -53,7 +57,6 @@ import {
   createDID,
   createDIDKey,
   createDIDWeb,
-  createDIDSynet,
   createDIDDocument,
 } from "./create";
 
@@ -74,7 +77,6 @@ export default {
   createDID,
   createDIDKey,
   createDIDWeb,
-  createDIDSynet,
   createDIDDocument,
   parseDID,
   validateDID,

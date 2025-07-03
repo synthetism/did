@@ -52,7 +52,7 @@ describe('Integration Tests', () => {
       
       // Create a DID document
       const document = createDIDDocument(did, {
-        publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK'
+        publicKey: 'z2DeuicgUFGK9784FgMs5DG57pbDLWGaDu6TnXCisMgptRw'
       });
       
       expect(document.id).toBe(did);
@@ -62,7 +62,7 @@ describe('Integration Tests', () => {
 
     it('should create, parse, validate, and document a did:web', () => {
       // Create a DID
-      const did = createDID({ method: 'web', identifier: 'example.com' });
+      const did = createDID({ method: 'web', domain: 'example.com' });
       
       // Verify it's a valid DID
       expect(isDID(did)).toBe(true);
@@ -93,45 +93,6 @@ describe('Integration Tests', () => {
       expect(document.id).toBe(did);
       expect(document.service).toHaveLength(1);
       expect(document.service?.[0].id).toBe('did:web:example.com#agent');
-    });
-
-    it('should create, parse, validate, and document a did:synet', () => {
-      // Create a DID
-      const did = createDID({ method: 'synet', identifier: 'test-synet-integration-identifier-123456789' });
-      
-      // Verify it's a valid DID
-      expect(isDID(did)).toBe(true);
-      expect(did).toBe('did:synet:test-synet-integration-identifier-123456789');
-      
-      // Parse the DID
-      const parsed = parseDID(did);
-      expect(parsed.isValid).toBe(true);
-      expect(parsed.components.method).toBe('synet');
-      expect(parsed.components.identifier).toBeDefined();
-      expect(parsed.components.identifier.length).toBeGreaterThanOrEqual(32);
-      expect(parsed.components.identifier.length).toBeLessThanOrEqual(50);
-      
-      // Validate the DID
-      const validation = validateDID(did);
-      expect(validation.isValid).toBe(true);
-      expect(validation.error).toBeUndefined();
-      
-      // Extract components
-      expect(extractMethod(did)).toBe('synet');
-      expect(extractIdentifier(did)).toBe(parsed.components.identifier);
-      
-      // Create a DID document
-      const document = createDIDDocument(did, {
-        publicKey: 'z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
-        services: [
-          { id: '#synet', type: 'SynetMessaging', serviceEndpoint: 'https://synet.ai/messaging' }
-        ]
-      });
-      
-      expect(document.id).toBe(did);
-      expect(document.verificationMethod).toBeDefined();
-      expect(document.service).toHaveLength(1);
-      expect(document.service?.[0].type).toBe('SynetMessaging');
     });
   });
 
@@ -194,7 +155,7 @@ describe('Integration Tests', () => {
         createDID({ method: 'web' });
         expect.fail('Should have thrown an error');
       } catch (error) {
-        expect(error.message).toContain('Identifier (domain) is required for did:web');
+        expect(error.message).toContain('domain is required for did:web');
       }
       
       try {
@@ -240,7 +201,7 @@ describe('Integration Tests', () => {
       const testDIDs = [
         'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
         'did:web:example.com/path/to/resource?service=agent&version=1.0#keys-1',
-        'did:synet:abcdefghijklmnopqrstuvwxyz0123456789abcdef'
+        'did:web:subdomain.example.com:8080/path?query=param#fragment'
       ];
       
       // Parse each DID multiple times

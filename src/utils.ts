@@ -21,9 +21,9 @@ const DID_REGEX =
   /^did:([a-z0-9]+):([^/?#]+)(?:\/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?$/;
 
 /**
- * Supported DID methods
+ * Supported DID methods for production use
  */
-const SUPPORTED_METHODS: DIDMethod[] = ["key", "web", "synet"];
+const SUPPORTED_METHODS: DIDMethod[] = ["key", "web"];
 
 /**
  * Parse a DID URL into its components
@@ -135,15 +135,6 @@ export function validateDID(did: string): DIDValidationResult {
         };
       }
       break;
-
-    case "synet":
-      if (components.identifier.length < 8) {
-        return {
-          isValid: false,
-          error: "did:synet identifier must be at least 8 characters",
-        };
-      }
-      break;
   }
 
   return {
@@ -187,7 +178,31 @@ export function createDIDURL(components: DIDComponents): string {
  * @returns True if valid DID
  */
 export function isDID(did: string): boolean {
-  return validateDID(did).isValid;
+  if (!did || typeof did !== "string") {
+    return false;
+  }
+
+  // Basic DID format check
+  const didRegex = /^did:([a-z0-9]+):(.+)$/;
+  const match = did.match(didRegex);
+  
+  if (!match) {
+    return false;
+  }
+
+  const [, method, identifier] = match;
+  
+  // Validate supported methods
+  if (!SUPPORTED_METHODS.includes(method as DIDMethod)) {
+    return false;
+  }
+
+  // Basic identifier validation
+  if (!identifier || identifier.length === 0) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -197,8 +212,12 @@ export function isDID(did: string): boolean {
  * @returns DID method or null if invalid
  */
 export function extractMethod(did: string): DIDMethod | null {
-  const result = parseDID(did);
-  return result.isValid ? result.components.method : null;
+  if (!isDID(did)) {
+    return null;
+  }
+  
+  const match = did.match(/^did:([a-z0-9]+):/);
+  return match ? match[1] as DIDMethod : null;
 }
 
 /**
@@ -208,8 +227,12 @@ export function extractMethod(did: string): DIDMethod | null {
  * @returns DID identifier or null if invalid
  */
 export function extractIdentifier(did: string): string | null {
-  const result = parseDID(did);
-  return result.isValid ? result.components.identifier : null;
+  if (!isDID(did)) {
+    return null;
+  }
+  
+  const match = did.match(/^did:[a-z0-9]+:(.+)$/);
+  return match ? match[1] : null;
 }
 
 /**
