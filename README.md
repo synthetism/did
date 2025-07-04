@@ -1,24 +1,24 @@
 # @synet/did
 
 ```bash
- ____                            __      
+ ____                            __  
 /\  _`\                         /\ \__   
 \ \,\L\_\  __  __    ___      __\ \ ,_\  
  \/_\__ \ /\ \/\ \ /' _ `\  /'__`\ \ \/  
    /\ \L\ \ \ \_\ \/\ \/\ \/\  __/\ \ \_ 
    \ `\____\/`____ \ \_\ \_\ \____\\ \__\
     \/_____/`/___/> \/_/\/_/\/____/ \/__/
-               /\___/                    
-               \/__/                     
-      ____    ______   ____              
-     /\  _`\ /\__  _\ /\  _`\            
-     \ \ \/\ \/_/\ \/ \ \ \/\ \          
-      \ \ \ \ \ \ \ \  \ \ \ \ \         
-       \ \ \_\ \ \_\ \__\ \ \_\ \        
-        \ \____/ /\_____\\ \____/        
-         \/___/  \/_____/ \/___/         
-                                                                                                                  
-version: 1.0.1
+               /\___/                
+               \/__/                 
+      ____    ______   ____          
+     /\  _`\ /\__  _\ /\  _`\        
+     \ \ \/\ \/_/\ \/ \ \ \/\ \      
+      \ \ \ \ \ \ \ \  \ \ \ \ \     
+       \ \ \_\ \ \_\ \__\ \ \_\ \    
+        \ \____/ /\_____\\ \____/    
+         \/___/  \/_____/ \/___/     
+                                                                                                              
+version: 1.0.2
 description: You are Signal
 security-level: Never enough
 ```
@@ -123,7 +123,6 @@ This library implements cryptographic encoding exactly as specified in the stand
 - Implements unsigned LEB128 encoding for multicodec prefixes
 - Handles values up to 127 in single byte, larger values in multiple bytes
 - Follows the same encoding used by Protocol Buffers and WebAssembly
-
 
 ## API Reference
 
