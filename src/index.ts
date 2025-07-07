@@ -55,6 +55,10 @@ export {
   createDIDDocument,
 } from "./create";
 
+// Export DID Unit
+export { DID } from "./did";
+export type { DIDOptions } from "./did";
+
 // Import functions for default export
 import {
   createDID,
