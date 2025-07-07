@@ -47,8 +47,7 @@ function mapKeyTypeToDIDKeyType(keyType: string): KeyType | null {
 
 /**
  * Validate and format public key to hex
- * For now, this is a simplified version that focuses on hex input
- * PEM-to-hex conversion will be implemented in a future iteration
+ * Supports PEM, hex, and base64 formats
  */
 function validateAndConvertKeyToHex(key: string, keyType?: string): string | null {
   if (!key || typeof key !== 'string') {
@@ -57,35 +56,43 @@ function validateAndConvertKeyToHex(key: string, keyType?: string): string | nul
   
   const trimmed = key.trim();
   
-  // Check if it's already hex format
-  if (/^[0-9a-fA-F]+$/.test(trimmed)) {
-    return trimmed.toLowerCase();
-  }
+  // Detect the key format first
+  const detectedFormat = detectKeyFormat(trimmed);
   
-  // For PEM format, try conversion using the utility
-  if (trimmed.includes("-----BEGIN")) {
-    try {
-      const hexKey = toHex(trimmed);
-      return hexKey ? hexKey.toLowerCase() : null;
-    } catch (error) {
-      // If conversion fails, return null for now
-      // This is a temporary limitation - PEM conversion needs more work
-      console.error("PEM to hex conversion not fully implemented:", error);
+  switch (detectedFormat) {
+    case 'hex':
+      // Validate hex format more strictly
+      if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0) {
+        return trimmed.toLowerCase();
+      }
       return null;
-    }
-  }
-  
-  // Check for base64 format and try conversion
-  if (/^[A-Za-z0-9+/]+=*$/.test(trimmed)) {
-    try {
-      const hexKey = toHex(trimmed);
-      return hexKey ? hexKey.toLowerCase() : null;
-    } catch (error) {
+    
+    case 'pem':
+      try {
+        const hexKey = toHex(trimmed);
+        if (hexKey && /^[0-9a-fA-F]+$/.test(hexKey) && hexKey.length % 2 === 0) {
+          return hexKey.toLowerCase();
+        }
+      } catch (error) {
+        console.error("PEM to hex conversion failed:", error);
+      }
       return null;
-    }
+    
+    case 'base64':
+      try {
+        const hexKey = toHex(trimmed);
+        if (hexKey && /^[0-9a-fA-F]+$/.test(hexKey) && hexKey.length % 2 === 0) {
+          return hexKey.toLowerCase();
+        }
+      } catch (error) {
+        console.error("Base64 to hex conversion failed:", error);
+      }
+      return null;
+    
+    default:
+      // Unknown format
+      return null;
   }
-  
-  return null;
 }
 
 /**
@@ -95,6 +102,8 @@ function validateAndConvertKeyToHex(key: string, keyType?: string): string | nul
 export class DID extends Unit {
   private didId: string;
   private meta: Record<string, unknown>;
+  private _directPublicKey?: string;
+  private _directKeyType?: string;
 
   private constructor(meta: Record<string, unknown> = {}) {
     super(createUnitSchema({
@@ -138,6 +147,32 @@ export class DID extends Unit {
   }
 
   /**
+   * Create DID unit from direct key input
+   * Supports simple use cases without requiring Key/Signer units
+   */
+  static createFromKey(
+    publicKey: string,
+    keyType: string,
+    meta?: Record<string, unknown>
+  ): DID {
+    const did = new DID(meta);
+    did._directPublicKey = publicKey;
+    did._directKeyType = keyType;
+    return did;
+  }
+
+  /**
+   * Create DID unit from key pair object
+   * Convenience method for working with generateKeyPair() results
+   */
+  static createFromKeyPair(
+    keyPair: { publicKey: string; type: string },
+    meta?: Record<string, unknown>
+  ): DID {
+    return DID.createFromKey(keyPair.publicKey, keyPair.type, meta);
+  }
+
+  /**
    * Generate DID based on options
    */
   async generate(options: DIDOptions = {}): Promise<string | null> {
@@ -150,7 +185,7 @@ export class DID extends Unit {
       
       if (method === 'web') {
         if (!domain) {
-          this._markFailed('Domain is required for did:web');
+          console.error('[🪪] Domain is required for did:web');
           return null;
         }
         return this.generateWeb(domain, path);
@@ -159,7 +194,6 @@ export class DID extends Unit {
       return null;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this._markFailed(`Failed to generate DID: ${errorMessage}`);
       console.error('[🪪] Failed to generate DID:', error);
       return null;
     }
@@ -173,14 +207,19 @@ export class DID extends Unit {
     try {
       const { publicKey, keyType } = options;
       
-      // Option 1: Direct public key input
+      // Option 1: Direct public key input from options
       if (publicKey && keyType) {
         return this.generateKeyFromInput(publicKey, keyType);
       }
       
-      // Option 2: Learn from other units
+      // Option 2: Direct public key input from factory method
+      if (this._directPublicKey && this._directKeyType) {
+        return this.generateKeyFromInput(this._directPublicKey, this._directKeyType);
+      }
+      
+      // Option 3: Learn from other units
       if (!this.capableOf('getPublicKey') || !(this.capableOf('getType') || this.capableOf('getAlgorithm'))) {
-        this._markFailed('Missing key capabilities. Unit needs to learn from a key unit first or provide publicKey/keyType directly.');
+        console.error('[🪪] Missing key capabilities. Provide publicKey/keyType directly or learn from a key unit first.');
         return null;
       }
       
@@ -198,14 +237,13 @@ export class DID extends Unit {
         : await this.execute('getAlgorithm') as string;
       
       if (!learnedPublicKey || !learnedKeyType) {
-        this._markFailed('Failed to get key information from learned capabilities');
+        console.error('[🪪] Failed to get key information from learned capabilities');
         return null;
       }
       
       return this.generateKeyFromInput(learnedPublicKey, learnedKeyType);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this._markFailed(`Failed to generate did:key: ${errorMessage}`);
       console.error('[🪪] Failed to generate did:key:', error);
       return null;
     }
@@ -231,7 +269,6 @@ export class DID extends Unit {
       return createDIDKey(publicKeyHex, didKeyType);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this._markFailed(`Failed to generate did:key from input: ${errorMessage}`);
       console.error('[🪪] Failed to generate did:key from input:', error);
       return null;
     }
@@ -243,14 +280,13 @@ export class DID extends Unit {
   generateWeb(domain: string, path?: string): string | null {
     try {
       if (!domain) {
-        this._markFailed('Domain is required for did:web');
+        console.error('[🪪] Domain is required for did:web');
         return null;
       }
       
       return createDIDWeb(domain, path);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this._markFailed(`Failed to generate did:web: ${errorMessage}`);
       console.error('[🪪] Failed to generate did:web:', error);
       return null;
     }
@@ -262,8 +298,13 @@ export class DID extends Unit {
   canGenerateKey(options: DIDOptions = {}): boolean {
     const { publicKey, keyType } = options;
     
-    // Can generate if we have direct input
+    // Can generate if we have direct input in options
     if (publicKey && keyType) {
+      return true;
+    }
+    
+    // Can generate if we have direct input from factory methods
+    if (this._directPublicKey && this._directKeyType) {
       return true;
     }
     
