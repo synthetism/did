@@ -11,11 +11,11 @@
  * - Basic DID document generation
  * - Type-safe interfaces and utilities
  *
- * @version 1.0.1
+ * @version 1.0.3
  * @license MIT
  */
 
-export const VERSION = "1.0.1";
+export const VERSION = "1.0.3";
 
 
 // Export types
@@ -76,10 +76,13 @@ import {
   normalizeDID,
 } from "./utils";
 
+import { DID } from "./did";
+
 // Version export
 
 // Default export for convenience
 export default {
+  // Core functions
   createDID,
   createDIDKey,
   createDIDWeb,
@@ -90,5 +93,8 @@ export default {
   extractMethod,
   extractIdentifier,
   normalizeDID,
+  // DID Unit
+  DID,
+  // Meta
   VERSION,
 };

@@ -8,17 +8,17 @@
    /\ \L\ \ \ \_\ \/\ \/\ \/\  __/\ \ \_ 
    \ `\____\/`____ \ \_\ \_\ \____\\ \__\
     \/_____/`/___/> \/_/\/_/\/____/ \/__/
-               /\___/                
-               \/__/                 
-      ____    ______   ____          
-     /\  _`\ /\__  _\ /\  _`\        
-     \ \ \/\ \/_/\ \/ \ \ \/\ \      
-      \ \ \ \ \ \ \ \  \ \ \ \ \     
-       \ \ \_\ \ \_\ \__\ \ \_\ \    
-        \ \____/ /\_____\\ \____/    
-         \/___/  \/_____/ \/___/     
-                                                                                                              
-version: 1.0.2
+               /\___/          
+               \/__/           
+      ____    ______   ____    
+     /\  _`\ /\__  _\ /\  _`\  
+     \ \ \/\ \/_/\ \/ \ \ \/\ \  
+      \ \ \ \ \ \ \ \  \ \ \ \ \   
+       \ \ \_\ \ \_\ \__\ \ \_\ \  
+        \ \____/ /\_____\\ \____/  
+         \/___/  \/_____/ \/___/   
+                                                                                                        
+version: 1.0.3
 description: You are Signal
 security-level: Never enough
 ```
@@ -88,6 +88,415 @@ const document = createDIDDocument(keyDID, {
 
 // Service ID becomes: "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw#agent"
 ```
+
+## DID Unit - Composable DID Generation
+
+The DID Unit provides a **composable architecture** for DID generation, supporting both **simple direct usage** and **advanced teach/learn patterns**. This unit-based approach enables flexible key management and integration with other Synet units.
+
+### Simple Usage with Direct Keys
+
+Perfect for applications that need straightforward DID creation from existing keys:
+
+```typescript
+import { DID } from '@synet/did';
+import { generateKeyPair } from '@synet/keys';
+
+// Generate cryptographic keys
+const keyPair = generateKeyPair('ed25519');
+
+// Method 1: Direct key creation
+const unit = DID.createFromKey(keyPair.publicKey, keyPair.type);
+const did = await unit.generate({ method: 'key' });
+console.log(did); // "did:key:z6Mk..."
+
+// Method 2: Key pair object
+const unit2 = DID.createFromKeyPair(keyPair);
+const did2 = await unit2.generate({ method: 'key' });
+console.log(did2); // "did:key:z6Mk..."
+
+// Method 3: Direct generation (no factory needed)
+const unit3 = DID.create();
+const did3 = await unit3.generate({
+  method: 'key',
+  publicKey: keyPair.publicKey,
+  keyType: keyPair.type
+});
+console.log(did3); // "did:key:z6Mk..."
+```
+
+### Key Format Support
+
+The DID Unit automatically handles multiple key formats:
+
+```typescript
+import { DID } from '@synet/did';
+
+// Hex format (raw bytes)
+const hexKey = 'abcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
+const unit1 = DID.createFromKey(hexKey, 'ed25519');
+
+// PEM format (from key generation libraries)
+const pemKey = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA110FoCJFvdQlvEwVjDgSBcNaUuRVkOoLjmhNGxm2MQ4=
+-----END PUBLIC KEY-----`;
+const unit2 = DID.createFromKey(pemKey, 'ed25519');
+
+// Base64 format  
+const base64Key = '210FoCJFvdQlvEwVjDgSBcNaUuRVkOoLjmhNGxm2MQ4=';
+const unit3 = DID.createFromKey(base64Key, 'ed25519');
+
+// All generate identical DIDs
+const did1 = await unit1.generate({ method: 'key' });
+const did2 = await unit2.generate({ method: 'key' });
+const did3 = await unit3.generate({ method: 'key' });
+```
+
+### Advanced Usage with Signer/Key Units
+
+For applications requiring composable architectures, here's the proper separation of concerns:
+
+**Signer** generates keys and handles secrets, **Key** holds public keys, **DID** generates identifiers:
+
+```typescript
+import { DID } from '@synet/did';
+import { Key, Signer } from '@synet/keys';
+
+// Step 1: Signer generates the cryptographic key pair
+const signer = Signer.generate('ed25519'); // Generate ed25519 key pair
+if (!signer) throw new Error('Failed to generate signer');
+
+// Step 2: Key unit is created from Signer
+const key = Key.createFromSigner(signer, { purpose: 'identity' });
+if (!key) throw new Error('Failed to create key from signer');
+
+// Step 3: DID unit learns public key capabilities from Key
+const did = DID.create();
+did.learn([key.teach()]); // DID learns public key info (no private key exposure)
+
+// Step 4: Generate DID using the public key learned from Key Unit
+const didResult = await did.generate({ method: 'key' });
+console.log(didResult); // "did:key:z6Mk..."
+
+// Verification - each unit has its proper role
+console.log(signer.canSign()); // true - can sign with private key
+console.log(key.canSign()); // true - has signing capability from signer
+console.log(did.canGenerateKey()); // true - can generate DID from public key
+```
+
+**Real-world Production Scenario:**
+
+```typescript
+import { DID } from '@synet/did';
+import { Key, Signer } from '@synet/keys';
+
+// Production identity creation workflow
+async function createProductionIdentity(userId: string) {
+  // 1. Generate cryptographic material securely
+  const signer = Signer.generate('ed25519');
+  if (!signer) throw new Error('Failed to generate signer');
+
+  // 2. Create Key unit from Signer
+  const key = Key.createFromSigner(signer, { 
+    userId, 
+    purpose: 'identity',
+    created: Date.now() 
+  });
+  if (!key) throw new Error('Failed to create key from signer');
+
+  // 3. Create DID from Key capabilities (no private key exposure)
+  const did = DID.create({ userId, purpose: 'authentication' });
+  did.learn([key.teach()]);
+
+  // 4. Generate the DID
+  const identity = await did.generate({ method: 'key' });
+
+  return {
+    identity, // DID for public use
+    signer,   // Keep private for signing operations
+    key,      // Public key for verification
+    did       // DID unit for identity operations
+  };
+}
+
+// Usage
+const userIdentity = await createProductionIdentity('user-123');
+console.log('Identity:', userIdentity.identity);
+// "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+
+// Sign something with the private key
+const signature = await userIdentity.signer.sign('important message');
+
+// Verify with public key
+const isValid = await userIdentity.key.verify('important message', signature);
+```
+
+**SuperKey - Evolution Pattern (Advanced):**
+
+For ultimate simplicity, a Key can evolve to absorb Signer and DID capabilities:
+
+```typescript
+import { Key, Signer } from '@synet/keys';
+import { DID } from '@synet/did';
+
+// SuperKey: Key that evolved with Signer and DID capabilities
+const signer = Signer.generate('ed25519');
+const superKey = Key.createFromSigner(signer, { purpose: 'superkey' });
+
+// SuperKey can now sign and verify (native capabilities from Signer)
+const signature = await superKey.sign('hello world');
+const isValid = await superKey.verify('hello world', signature);
+
+// Learn DID capabilities (for inspection and teaching to other units)
+const did = DID.create();
+superKey.learn([did.teach()]);
+
+// SuperKey now has learned DID capabilities
+console.log(superKey.canSign()); // true (native capability)
+console.log(superKey.capableOf('generate')); // true (learned capability)
+
+// For actual DID generation, create a DID unit and teach it our key info
+const didUnit = DID.create();
+didUnit.learn([superKey.teach()]); // DID learns key capabilities from SuperKey
+const identity = await didUnit.generate({ method: 'key' });
+console.log(identity); // "did:key:z6Mk..."
+
+// SuperKey can teach its capabilities to specialized units
+const anotherDID = DID.create();
+anotherDID.learn([superKey.teach()]); // Transfer key capabilities
+const identity2 = await anotherDID.generate({ method: 'key' });
+```
+
+### Unit Capabilities and Introspection
+
+DID Units provide comprehensive introspection and capability management:
+
+```typescript
+import { DID } from '@synet/did';
+
+const unit = DID.createFromKey(publicKey, 'ed25519', { 
+  purpose: 'authentication',
+  environment: 'production' 
+});
+
+// Check capabilities
+console.log(unit.canGenerateKey()); // true
+console.log(unit.capabilities()); // Array of available capabilities
+
+// Unit identity
+console.log(unit.whoami()); 
+// "[🪪] DID Unit - Minimalistic DID generator (abc12345) ready to generate DIDs"
+
+// Export unit state
+const unitData = unit.toJSON();
+console.log(unitData.meta); // { purpose: 'authentication', environment: 'production' }
+
+// Teaching capabilities to other units
+const teachings = unit.teach();
+console.log(Object.keys(teachings)); // ['generate', 'generateKey', 'generateWeb', ...]
+```
+
+### Supported Key Types
+
+The DID Unit supports all major cryptographic key types:
+
+```typescript
+import { DID } from '@synet/did';
+
+// Ed25519 - Recommended for digital signatures
+const ed25519Unit = DID.createFromKey(ed25519PublicKey, 'ed25519');
+const ed25519DID = await ed25519Unit.generate({ method: 'key' });
+// Result: "did:key:z6Mk..."
+
+// secp256k1 - Bitcoin/Ethereum compatible
+const secp256k1Unit = DID.createFromKey(secp256k1PublicKey, 'secp256k1');
+const secp256k1DID = await secp256k1Unit.generate({ method: 'key' });
+// Result: "did:key:zQ3s..."
+
+// X25519 - For key agreement/encryption
+const x25519Unit = DID.createFromKey(x25519PublicKey, 'x25519');
+const x25519DID = await x25519Unit.generate({ method: 'key' });
+// Result: "did:key:z6LS..."
+```
+
+### Error Handling with Units
+
+DID Units provide graceful error handling while maintaining unit integrity:
+
+```typescript
+import { DID } from '@synet/did';
+
+// Create unit with invalid key (unit creation still succeeds)
+const unit = DID.createFromKey('invalid-key', 'ed25519');
+
+console.log(unit.created); // true (unit creation succeeded)
+console.log(unit.canGenerateKey()); // true (unit has direct key data)
+
+// DID generation will fail gracefully
+const did = await unit.generate({ method: 'key' });
+console.log(did); // null (operation failed)
+console.log(unit.created); // true (unit still valid)
+
+// Unit remains functional for other operations
+const webDID = await unit.generate({ 
+  method: 'web', 
+  domain: 'example.com' 
+});
+console.log(webDID); // "did:web:example.com" (succeeds)
+```
+
+### Architecture Principles
+
+The DID Unit follows clear separation of concerns in the Synet ecosystem:
+
+#### **Signer → Key → DID** (Proper Flow)
+
+- **Signer**: Generates key pairs, holds private keys, performs signing operations
+- **Key**: Holds public keys only, learned from Signer, enables verification
+- **DID**: Creates identifiers from public keys, learned from Key (not Signer)
+
+#### **Why This Separation Matters**
+
+```typescript
+// ❌ WRONG: DID learning directly from Signer (exposes private key capabilities)
+// didUnit.learn([signerUnit.teach()]); // Dangerous!
+
+// ✅ CORRECT: DID learns only public key info from Key
+const signer = Signer.generate('ed25519');
+if (!signer) throw new Error('Failed to generate signer');
+
+const key = Key.createFromSigner(signer, { purpose: 'identity' });
+if (!key) throw new Error('Failed to create key from signer');
+
+const did = DID.create();
+did.learn([key.teach()]); // DID learns public key capabilities only
+```
+
+#### **Evolution Patterns**
+
+1. **Simple**: Direct key input (`DID.createFromKey()`)
+2. **Composable**: Separate units with teach/learn
+3. **SuperKey**: Key evolves to absorb Signer + DID capabilities
+
+### Integration with @synet/keys
+
+Perfect integration with the Synet key management ecosystem, respecting proper separation of concerns:
+
+```typescript
+import { DID } from '@synet/did';
+import { generateKeyPair, Key, Signer } from '@synet/keys';
+
+// Method 1: Direct integration with generateKeyPair (simplest)
+const keyPair = generateKeyPair('ed25519');
+const unit = DID.createFromKeyPair(keyPair);
+const did = await unit.generate({ method: 'key' });
+
+// Method 2: Proper composable architecture
+const signer = Signer.generate('ed25519');
+if (!signer) throw new Error('Failed to generate signer');
+
+const key = Key.createFromSigner(signer, { purpose: 'identity' });
+if (!key) throw new Error('Failed to create key from signer');
+
+const didUnit = DID.create();
+didUnit.learn([key.teach()]); // DID learns from Key (not Signer)
+
+const did2 = await didUnit.generate({ method: 'key' });
+
+// Method 3: Mixed approach for flexibility
+const keyPair2 = generateKeyPair('secp256k1');
+const did3 = await DID.create().generate({
+  method: 'key',
+  publicKey: keyPair2.publicKey,
+  keyType: keyPair2.type
+});
+
+// Method 4: Production workflow
+async function createSecureIdentity() {
+  // 1. Generate keys securely
+  const signer = Signer.generate('ed25519');
+  if (!signer) throw new Error('Failed to generate signer');
+  
+  // 2. Extract public key for DID creation
+  const publicKey = signer.getPublicKey();
+  
+  // 3. Create DID directly (no intermediate Key unit needed)
+  const did = DID.createFromKey(publicKey, 'ed25519');
+  const identity = await did.generate({ method: 'key' });
+  
+  return { identity, signer }; // Identity + signing capability
+}
+```
+
+### Factory Methods Reference
+
+The DID Unit provides convenient factory methods for different use cases:
+
+```typescript
+import { DID } from '@synet/did';
+
+// DID.create(meta?) - Standard unit creation
+const unit1 = DID.create({ purpose: 'authentication' });
+
+// DID.createFromKey(publicKey, keyType, meta?) - Direct key input
+const unit2 = DID.createFromKey(
+  'abcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+  'ed25519',
+  { source: 'hardware-key' }
+);
+
+// DID.createFromKeyPair(keyPair, meta?) - Key pair object
+const keyPair = { publicKey: '...', type: 'ed25519' };
+const unit3 = DID.createFromKeyPair(keyPair, { generated: Date.now() });
+
+// All methods return fully functional DID units
+console.log(unit1.created); // true
+console.log(unit2.created); // true
+console.log(unit3.created); // true
+```
+
+### DID Web Support
+
+DID Units also support web-based DIDs without requiring keys:
+
+```typescript
+import { DID } from '@synet/did';
+
+const unit = DID.create();
+
+// Generate did:web (no key capabilities needed)
+const webDID = await unit.generate({
+  method: 'web',
+  domain: 'example.com',
+  path: 'users/alice'
+});
+
+console.log(webDID); // "did:web:example.com:users:alice"
+
+// Or use the direct method
+const webDID2 = unit.generateWeb('example.com', 'users/bob');
+console.log(webDID2); // "did:web:example.com:users:bob"
+```
+
+### Usage Patterns Summary
+
+The DID Unit supports multiple usage patterns to fit different architectural needs:
+
+1. **Simple Direct Usage**: `DID.createFromKey()` for straightforward key-to-DID conversion
+2. **Key Pair Integration**: `DID.createFromKeyPair()` for working with key generation results
+3. **Options-Based**: `DID.create().generate(options)` for flexible parameter passing
+4. **Composable Architecture**: `DID.create().learn()` for unit-based ecosystems
+5. **Web-Only**: `DID.create().generateWeb()` for web-based identities
+
+Choose the pattern that best fits your application's architecture and complexity requirements.
+
+### DID Unit Best Practices
+
+- **Use factory methods** for simple use cases (createFromKey, createFromKeyPair)
+- **Use teach/learn patterns** for complex, composable architectures
+- **Check unit readiness** with `canGenerateKey()` before DID generation
+- **Handle errors gracefully** - operations can fail while units remain valid
+- **Leverage introspection** - use `whoami()` and `capabilities()` for debugging
+- **Store metadata** in unit creation for tracking and audit trails
 
 ### DID Key Format Validation
 
@@ -201,6 +610,247 @@ const webDID = createDID({
   domain: 'example.com',
   path: 'users/alice'
 });
+```
+
+### DID Unit API
+
+#### `DID.create(meta?)`
+
+Create a new DID Unit instance with optional metadata. This is the standard way to create a composable DID unit.
+
+```typescript
+import { DID } from '@synet/did';
+
+// Basic unit creation
+const unit = DID.create();
+
+// Unit with metadata
+const unit = DID.create({
+  purpose: 'authentication',
+  environment: 'production',
+  created: Date.now()
+});
+
+console.log(unit.created); // true
+console.log(unit.whoami()); // "[🪪] DID Unit - waiting to learn key capabilities"
+```
+
+#### `DID.createFromKey(publicKey, keyType, meta?)`
+
+Create a DID Unit with direct key input. Perfect for simple usage patterns where you have existing keys.
+
+```typescript
+import { DID } from '@synet/did';
+
+// Direct key creation
+const unit = DID.createFromKey(
+  'abcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+  'ed25519',
+  { source: 'hardware-key' }
+);
+
+// Generate DID immediately (no learning required)
+const did = await unit.generate({ method: 'key' });
+console.log(did); // "did:key:z6Mk..."
+
+// Unit is ready for key generation
+console.log(unit.canGenerateKey()); // true
+```
+
+#### `DID.createFromKeyPair(keyPair, meta?)`
+
+Create a DID Unit from a key pair object. Convenient for working with `generateKeyPair()` results from `@synet/keys`.
+
+```typescript
+import { DID } from '@synet/did';
+import { generateKeyPair } from '@synet/keys';
+
+// Generate key pair
+const keyPair = generateKeyPair('ed25519');
+
+// Create unit from key pair
+const unit = DID.createFromKeyPair(keyPair, {
+  algorithm: keyPair.type,
+  generated: Date.now()
+});
+
+// Generate DID
+const did = await unit.generate({ method: 'key' });
+console.log(did); // "did:key:z6Mk..."
+```
+
+#### `unit.generate(options)`
+
+Generate a DID based on the provided options. Supports both `did:key` and `did:web` methods.
+
+```typescript
+// Generate did:key (requires key capabilities or direct keys)
+const keyDID = await unit.generate({ method: 'key' });
+
+// Generate did:key with direct key input
+const keyDID2 = await unit.generate({
+  method: 'key',
+  publicKey: 'abcd1234...',
+  keyType: 'ed25519'
+});
+
+// Generate did:web (no key capabilities required)
+const webDID = await unit.generate({
+  method: 'web',
+  domain: 'example.com',
+  path: 'users/alice'
+});
+```
+
+#### `unit.generateKey(options?)`
+
+Generate a `did:key` DID specifically. Will use direct keys, factory-provided keys, or learned capabilities.
+
+```typescript
+// Use factory-provided keys
+const unit = DID.createFromKey(publicKey, 'ed25519');
+const did = await unit.generateKey(); // No options needed
+
+// Use direct key input via options
+const unit2 = DID.create();
+const did2 = await unit2.generateKey({
+  publicKey: 'abcd1234...',
+  keyType: 'ed25519'
+});
+
+// Use learned capabilities
+const unit3 = DID.create();
+const signer = Signer.generate('ed25519');
+if (!signer) throw new Error('Failed to generate signer');
+const key = Key.createFromSigner(signer, { purpose: 'test' });
+if (!key) throw new Error('Failed to create key from signer');
+unit3.learn([key.teach()]);
+const did3 = await unit3.generateKey(); // Uses learned keys
+```
+
+#### `unit.generateWeb(domain, path?)`
+
+Generate a `did:web` DID directly. No key capabilities required.
+
+```typescript
+const unit = DID.create();
+
+// Basic web DID
+const webDID = unit.generateWeb('example.com');
+// Result: "did:web:example.com"
+
+// Web DID with path
+const webDIDWithPath = unit.generateWeb('example.com', 'users/alice');
+// Result: "did:web:example.com:users:alice"
+```
+
+#### `unit.canGenerateKey(options?)`
+
+Check if the unit can generate `did:key` DIDs. Returns `true` if the unit has direct keys, factory keys, or learned capabilities.
+
+```typescript
+// Check factory-provided keys
+const unit = DID.createFromKey(publicKey, 'ed25519');
+console.log(unit.canGenerateKey()); // true
+
+// Check with options
+const unit2 = DID.create();
+console.log(unit2.canGenerateKey({
+  publicKey: 'abcd1234...',
+  keyType: 'ed25519'
+})); // true
+
+// Check learned capabilities
+const unit3 = DID.create();
+console.log(unit3.canGenerateKey()); // false
+
+const signer = Signer.generate('ed25519');
+if (!signer) throw new Error('Failed to generate signer');
+const key = Key.createFromSigner(signer, { purpose: 'test' });
+if (!key) throw new Error('Failed to create key from signer');
+unit3.learn([key.teach()]);
+console.log(unit3.canGenerateKey()); // true
+```
+
+#### `unit.whoami()`
+
+Get the unit's identity string with current status and capabilities.
+
+```typescript
+const unit1 = DID.create();
+console.log(unit1.whoami());
+// "[🪪] DID Unit - Minimalistic DID generator (abc12345) waiting to learn key capabilities"
+
+const unit2 = DID.createFromKey(publicKey, 'ed25519');
+console.log(unit2.whoami());
+// "[🪪] DID Unit - Minimalistic DID generator (def67890) ready to generate DIDs"
+```
+
+#### `unit.capabilities()`
+
+Get a list of all available capabilities that the unit can execute.
+
+```typescript
+const unit = DID.create();
+const caps = unit.capabilities();
+console.log(caps);
+// ['generate', 'generateKey', 'generateWeb', 'canGenerateKey', 'toJSON']
+```
+
+#### `unit.teach()`
+
+Export the unit's capabilities so other units can learn from it.
+
+```typescript
+const unit = DID.createFromKey(publicKey, 'ed25519');
+const teachings = unit.teach();
+
+// Another unit can learn these capabilities
+const learnerUnit = SomeOtherUnit.create();
+learnerUnit.learn([teachings]);
+```
+
+#### `unit.learn(capabilities)`
+
+Learn capabilities from other units. Part of the composable unit architecture.
+
+```typescript
+import { Key, Signer } from '@synet/keys';
+
+// Proper separation: Signer generates keys, Key holds public key, DID learns from Key
+const signer = Signer.generate('ed25519');
+if (!signer) throw new Error('Failed to generate signer');
+
+const key = Key.createFromSigner(signer, { purpose: 'identity' });
+if (!key) throw new Error('Failed to create key from signer');
+
+const didUnit = DID.create();
+
+// DID learns public key capabilities from Key (not from Signer)
+didUnit.learn([key.teach()]);
+
+// Now can generate DIDs using learned public key
+const did = await didUnit.generate({ method: 'key' });
+```
+
+#### `unit.toJSON()`
+
+Export the unit's current state as a JSON object for serialization or debugging.
+
+```typescript
+const unit = DID.createFromKey(publicKey, 'ed25519', {
+  purpose: 'authentication'
+});
+
+const unitData = unit.toJSON();
+console.log(unitData);
+// {
+//   id: 'abc12345',
+//   type: 'did-unit',
+//   meta: { purpose: 'authentication' },
+//   canGenerateKey: true,
+//   learnedCapabilities: ['generate', 'generateKey', ...]
+// }
 ```
 
 ### Parsing and Validation

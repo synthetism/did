@@ -1,6 +1,6 @@
 {
   "name": "@synet/did",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Secure, minimal, standards-compliant DID library for production environments. Supports did:key and did:web methods with strict validation and cryptographic security.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
