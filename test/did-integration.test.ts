@@ -74,13 +74,12 @@ describe('DID Unit Integration', () => {
           didUnit.learn([key.teach()]);
           
           // Try to generate did:key
-          // Note: This will return null because pemToHex is not implemented
-          // But it should not throw an error and should attempt the generation
+          // This should now work since pemToHex is implemented
           const result = await didUnit.generate({ method: 'key' });
           
-          // Currently expected to be null due to pemToHex not implemented
-          // but the test verifies the integration works without errors
-          expect(result).toBeNull();
+          // Should now successfully generate a did:key
+          expect(result).toBeTruthy();
+          expect(result).toMatch(/^did:key:z6Mk[A-Za-z0-9]+$/);
         }
       }
     });
@@ -306,7 +305,8 @@ describe('DID Unit Integration', () => {
           
           // 5. Verify results
           expect(didWeb).toBe('did:web:example.com:users:alice');
-          expect(didKey).toBeNull(); // pemToHex not implemented
+          expect(didKey).toBeTruthy(); // pemToHex is now implemented
+          expect(didKey).toMatch(/^did:key:z6Mk[A-Za-z0-9]+$/);
           
           // 6. Verify capabilities are maintained
           expect(didUnit.canGenerateKey()).toBe(true);

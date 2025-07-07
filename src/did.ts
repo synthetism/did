@@ -3,12 +3,14 @@
  * Pure Unit Architecture - learns from any unit that can teach key capabilities. 
  * 
  * Design principles:
- * - Pure Unit Architecture: uses teach/learn pattern only* 
+ * - Pure Unit Architecture: uses teach/learn pattern only 
  * - Dynamic capability checking with capableOf()
  * - Minimal and flexible
  * - Robust key format handling (PEM, hex, base64)
  * 
  * @author Synet Team
+ * @docs  https://github.com/synthetism/did
+ * @docs  https://github.com/synthetism/unit
  */
 
 import { Unit, createUnitSchema } from '@synet/unit';
@@ -183,7 +185,14 @@ export class DID extends Unit {
       }
       
       // Use learned capabilities to get key data
-      const learnedPublicKey = await this.execute('getPublicKey') as string;
+      // Try to get hex format first (if available), otherwise use PEM and convert
+      let learnedPublicKey: string;
+      if (this.capableOf('getPublicKeyHex')) {
+        learnedPublicKey = await this.execute('getPublicKeyHex') as string;
+      } else {
+        learnedPublicKey = await this.execute('getPublicKey') as string;
+      }
+      
       const learnedKeyType = this.capableOf('getType') 
         ? await this.execute('getType') as string
         : await this.execute('getAlgorithm') as string;
