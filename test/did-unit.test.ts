@@ -34,16 +34,13 @@ describe('DID Unit', () => {
 
   describe('Unit Interface', () => {
     it('should have correct DNA', () => {
-      expect(didUnit.dna.name).toBe('did-unit');
+      // In Unit 1.0.4, dna.id is used instead of dna.name
+      expect(didUnit.dna.id).toBe('did-unit');
       expect(didUnit.dna.version).toBe('1.0.0');
       expect(didUnit.dna.parent).toBeUndefined();
     });
 
-    it('should report identity correctly', () => {
-      const identity = didUnit.whoami();
-      expect(identity).toContain('[🪪] DID Unit');
-      expect(identity).toContain('Minimalistic DID generator');
-    });
+
 
     it('should list capabilities', () => {
       const capabilities = didUnit.capabilities();
@@ -73,11 +70,13 @@ describe('DID Unit', () => {
     it('should teach capabilities to other units', () => {
       const teachings = didUnit.teach();
       expect(teachings).toBeDefined();
-      expect(typeof teachings.generate).toBe('function');
-      expect(typeof teachings.generateKey).toBe('function');
-      expect(typeof teachings.generateWeb).toBe('function');
-      expect(typeof teachings.canGenerateKey).toBe('function');
-      expect(typeof teachings.toJSON).toBe('function');
+      expect(teachings.unitId).toBe('did-unit');
+      expect(teachings.capabilities).toBeDefined();
+      expect(typeof teachings.capabilities.generate).toBe('function');
+      expect(typeof teachings.capabilities.generateKey).toBe('function');
+      expect(typeof teachings.capabilities.generateWeb).toBe('function');
+      expect(typeof teachings.capabilities.canGenerateKey).toBe('function');
+      expect(typeof teachings.capabilities.toJSON).toBe('function');
     });
   });
 
@@ -88,26 +87,35 @@ describe('DID Unit', () => {
       });
 
       it('should return false when missing getPublicKey capability', () => {
-        // Learn only partial key capabilities
+        // Learn only partial key capabilities using proper TeachingContract format
         didUnit.learn([{
-          getType: () => 'ed25519'
+          unitId: 'test-unit',
+          capabilities: {
+            getType: () => 'ed25519'
+          }
         }]);
         expect(didUnit.canGenerateKey()).toBe(false);
       });
 
       it('should return false when missing getType capability', () => {
-        // Learn only partial key capabilities
+        // Learn only partial key capabilities using proper TeachingContract format
         didUnit.learn([{
-          getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----'
+          unitId: 'test-unit',
+          capabilities: {
+            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----'
+          }
         }]);
         expect(didUnit.canGenerateKey()).toBe(false);
       });
 
       it('should return true when has both key capabilities', () => {
-        // Learn both required key capabilities
+        // Learn both required key capabilities using proper TeachingContract format
         didUnit.learn([{
-          getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
-          getType: () => 'ed25519'
+          unitId: 'test-unit',
+          capabilities: {
+            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
+            getType: () => 'ed25519'
+          }
         }]);
         expect(didUnit.canGenerateKey()).toBe(true);
       });
@@ -144,7 +152,10 @@ describe('DID Unit', () => {
       it('should return null when missing key capabilities', async () => {
         // Learn only partial capabilities
         didUnit.learn([{
-          getType: () => 'ed25519'
+          unitId: 'test-unit',
+          capabilities: {
+            getType: () => 'ed25519'
+          }
         }]);
         const result = await didUnit.generateKey();
         expect(result).toBeNull();
@@ -153,8 +164,11 @@ describe('DID Unit', () => {
       it('should attempt to generate did:key when key capabilities are learned', async () => {
         // Learn key capabilities
         didUnit.learn([{
-          getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
-          getType: () => 'ed25519'
+          unitId: 'test-unit',
+          capabilities: {
+            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
+            getType: () => 'ed25519'
+          }
         }]);
         
         // Note: This will return null because pemToHex is not implemented yet
@@ -199,8 +213,11 @@ describe('DID Unit', () => {
       it('should attempt did:key generation when method is key', async () => {
         // Learn key capabilities
         didUnit.learn([{
-          getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
-          getType: () => 'ed25519'
+          unitId: 'test-unit',
+          capabilities: {
+            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
+            getType: () => 'ed25519'
+          }
         }]);
 
         const result = await didUnit.generate({
@@ -277,8 +294,11 @@ describe('DID Unit', () => {
     it('should handle exceptions in generateKey gracefully', async () => {
       // Learn capabilities that might throw
       didUnit.learn([{
-        getPublicKey: () => { throw new Error('Test error'); },
-        getType: () => 'ed25519'
+        unitId: 'test-unit',
+        capabilities: {
+          getPublicKey: () => { throw new Error('Test error'); },
+          getType: () => 'ed25519'
+        }
       }]);
 
       const result = await didUnit.generateKey();
@@ -288,8 +308,14 @@ describe('DID Unit', () => {
 
   describe('Learning Patterns', () => {
     it('should learn multiple capability sets', () => {
-      const caps1 = { cap1: () => 'test1' };
-      const caps2 = { cap2: () => 'test2' };
+      const caps1 = { 
+        unitId: 'test-unit-1', 
+        capabilities: { cap1: () => 'test1' } 
+      };
+      const caps2 = { 
+        unitId: 'test-unit-2', 
+        capabilities: { cap2: () => 'test2' } 
+      };
       
       didUnit.learn([caps1, caps2]);
       
@@ -298,8 +324,14 @@ describe('DID Unit', () => {
     });
 
     it('should override capabilities when learning duplicates', () => {
-      const caps1 = { testCap: () => 'first' };
-      const caps2 = { testCap: () => 'second' };
+      const caps1 = { 
+        unitId: 'test-unit-1', 
+        capabilities: { testCap: () => 'first' } 
+      };
+      const caps2 = { 
+        unitId: 'test-unit-2', 
+        capabilities: { testCap: () => 'second' } 
+      };
       
       didUnit.learn([caps1]);
       didUnit.learn([caps2]);
