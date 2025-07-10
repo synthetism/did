@@ -132,24 +132,21 @@ describe('DID Unit', () => {
         expect(result).toBe('did:web:example.com:users:alice');
       });
 
-      it('should return null for empty domain', () => {
-        const result = didUnit.generateWeb('');
-        expect(result).toBeNull();
+      it('should throw error for empty domain', () => {
+        expect(() => didUnit.generateWeb('')).toThrow('Domain is required for did:web');
       });
 
-      it('should return null for null domain', () => {
-        const result = didUnit.generateWeb(null as unknown as string);
-        expect(result).toBeNull();
+      it('should throw error for null domain', () => {
+        expect(() => didUnit.generateWeb(null as unknown as string)).toThrow('Domain is required for did:web');
       });
     });
 
     describe('generateKey', () => {
-      it('should return null when no key capabilities learned', async () => {
-        const result = await didUnit.generateKey();
-        expect(result).toBeNull();
+      it('should throw error when no key capabilities learned', async () => {
+        await expect(didUnit.generateKey()).rejects.toThrow('Missing key capabilities');
       });
 
-      it('should return null when missing key capabilities', async () => {
+      it('should throw error when missing key capabilities', async () => {
         // Learn only partial capabilities
         didUnit.learn([{
           unitId: 'test-unit',
@@ -157,8 +154,7 @@ describe('DID Unit', () => {
             getType: () => 'ed25519'
           }
         }]);
-        const result = await didUnit.generateKey();
-        expect(result).toBeNull();
+        await expect(didUnit.generateKey()).rejects.toThrow('Missing key capabilities');
       });
 
       it('should attempt to generate did:key when key capabilities are learned', async () => {
@@ -171,19 +167,16 @@ describe('DID Unit', () => {
           }
         }]);
         
-        // Note: This will return null because pemToHex is not implemented yet
-        // But it should not throw an error
-        const result = await didUnit.generateKey();
-        expect(result).toBeNull(); // Expected due to pemToHex not implemented
+        // This should now throw because the key conversion will fail
+        await expect(didUnit.generateKey()).rejects.toThrow();
       });
     });
 
     describe('generate', () => {
-      it('should generate did:web by default when no method specified', async () => {
-        const result = await didUnit.generate({
+      it('should throw error when default method is key without capabilities', async () => {
+        await expect(didUnit.generate({
           domain: 'example.com'
-        });
-        expect(result).toBeNull(); // Because default method is 'key', not 'web'
+        })).rejects.toThrow('Missing key capabilities'); // Because default method is 'key'
       });
 
       it('should generate did:web when method is web', async () => {
@@ -203,11 +196,10 @@ describe('DID Unit', () => {
         expect(result).toBe('did:web:example.com:users:bob');
       });
 
-      it('should return null for did:web without domain', async () => {
-        const result = await didUnit.generate({
+      it('should throw error for did:web without domain', async () => {
+        await expect(didUnit.generate({
           method: 'web'
-        });
-        expect(result).toBeNull();
+        })).rejects.toThrow('Domain is required for did:web');
       });
 
       it('should attempt did:key generation when method is key', async () => {
@@ -220,18 +212,14 @@ describe('DID Unit', () => {
           }
         }]);
 
-        const result = await didUnit.generate({
-          method: 'key'
-        });
-        // Will return null because pemToHex not implemented, but should not throw
-        expect(result).toBeNull();
+        // This should throw because the key conversion will fail with invalid PEM
+        await expect(didUnit.generate({ method: 'key' })).rejects.toThrow();
       });
 
-      it('should return null for did:key without key capabilities', async () => {
-        const result = await didUnit.generate({
+      it('should throw error for did:key without key capabilities', async () => {
+        await expect(didUnit.generate({
           method: 'key'
-        });
-        expect(result).toBeNull();
+        })).rejects.toThrow('Missing key capabilities');
       });
     });
   });
@@ -284,14 +272,13 @@ describe('DID Unit', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid generate options gracefully', async () => {
-      const result = await didUnit.generate({
+    it('should throw error for invalid generate options', async () => {
+      await expect(didUnit.generate({
         method: 'invalid' as unknown as 'key' | 'web'
-      });
-      expect(result).toBeNull();
+      })).rejects.toThrow('Unsupported DID method: invalid');
     });
 
-    it('should handle exceptions in generateKey gracefully', async () => {
+    it('should throw error when generateKey encounters exceptions', async () => {
       // Learn capabilities that might throw
       didUnit.learn([{
         unitId: 'test-unit',
@@ -301,8 +288,7 @@ describe('DID Unit', () => {
         }
       }]);
 
-      const result = await didUnit.generateKey();
-      expect(result).toBeNull();
+      await expect(didUnit.generateKey()).rejects.toThrow('Test error');
     });
   });
 

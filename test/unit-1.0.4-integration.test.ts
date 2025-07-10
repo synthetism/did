@@ -286,11 +286,10 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle missing capabilities gracefully', async () => {
-      // No learning, should fail gracefully
-      const did = await didUnit.generate({ method: 'key' });
+    it('should throw error for missing capabilities', async () => {
+      // No learning, should throw error
+      await expect(didUnit.generate({ method: 'key' })).rejects.toThrow('Missing key capabilities');
       
-      expect(did).toBeNull();
       expect(didUnit.canGenerateKey()).toBe(false);
     });
 

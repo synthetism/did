@@ -78,98 +78,82 @@ export class DID extends Unit {
 
   /**
    * Generate DID based on options
+   * Uses exceptions for error handling (simple operation pattern)
    */
-  async generate(options: DIDOptions = {}): Promise<string | null> {
-    try {
-      const { method = 'key', domain, path } = options;
-      
-      if (method === 'key') {
-        return await this.generateKey();
-      }
-      
-      if (method === 'web') {
-        if (!domain) {
-          throw new Error('Domain is required for did:web');
-        }
-        return this.generateWeb(domain, path);
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('[🪪] Failed to generate DID:', error);
-      return null;
+  async generate(options: DIDOptions = {}): Promise<string> {
+    const { method = 'key', domain, path } = options;
+    
+    if (method === 'key') {
+      return await this.generateKey();
     }
+    
+    if (method === 'web') {
+      if (!domain) {
+        throw new Error('Domain is required for did:web');
+      }
+      return this.generateWeb(domain, path);
+    }
+    
+    throw new Error(`Unsupported DID method: ${method}`);
   }
 
   /**
    * Generate did:key from learned capabilities
    * Uses pure Unit Architecture - checks for learned capabilities
+   * Uses exceptions for error handling (simple operation pattern)
    */
-  async generateKey(): Promise<string | null> {
-    try {
-      // Check if we have learned key capabilities (with test compatibility)
-      if (!this.canGenerateKey()) {
-        console.error('[🪪] Missing key capabilities. Unit needs to learn from a key unit first.');
-        return null;
-      }
-      
-      // Use learned capabilities to get key data
-      const publicKey = await this.execute('getPublicKey') as string;
-      
-      // Try getKeyType first (new API), fall back to getType (for test compatibility)
-      let keyType: string;
-      if (this.can('getKeyType')) {
-        keyType = await this.execute('getKeyType') as string;
-      } else {
-        keyType = await this.execute('getType') as string;
-      }
-      
-      if (!publicKey || !keyType) {
-        console.error('[🪪] Failed to get key information from learned capabilities');
-        return null;
-      }
-      
-      // Convert PEM to hex for DID creation
-      const publicKeyHex = this.convertKeyToHex(publicKey);
-      if (!publicKeyHex) {
-        console.error('[🪪] Failed to convert public key to hex format');
-        return null;
-      }
-      
-      // Map key types to DID key types
-      const keyTypeMap: Record<string, KeyType> = {
-        'ed25519': 'ed25519-pub',
-        'secp256k1': 'secp256k1-pub',
-        'x25519': 'x25519-pub'
-      };
-      
-      const didKeyType = keyTypeMap[keyType];
-      if (!didKeyType) {
-        console.error(`[🪪] Unsupported key type for DID: ${keyType}`);
-        return null;
-      }
-      
-      return createDIDKey(publicKeyHex, didKeyType);
-    } catch (error) {
-      console.error('[🪪] Failed to generate did:key:', error);
-      return null;
+  async generateKey(): Promise<string> {
+    // Check if we have learned key capabilities (with test compatibility)
+    if (!this.canGenerateKey()) {
+      throw new Error('Missing key capabilities. Unit needs to learn from a key unit first.');
     }
+    
+    // Use learned capabilities to get key data
+    const publicKey = await this.execute('getPublicKey') as string;
+    
+    // Try getKeyType first (new API), fall back to getType (for test compatibility)
+    let keyType: string;
+    if (this.can('getKeyType')) {
+      keyType = await this.execute('getKeyType') as string;
+    } else {
+      keyType = await this.execute('getType') as string;
+    }
+    
+    if (!publicKey || !keyType) {
+      throw new Error('Failed to get key information from learned capabilities');
+    }
+    
+    // Convert PEM to hex for DID creation
+    const publicKeyHex = this.convertKeyToHex(publicKey);
+    if (!publicKeyHex) {
+      throw new Error('Failed to convert public key to hex format');
+    }
+    
+    // Map key types to DID key types
+    const keyTypeMap: Record<string, KeyType> = {
+      'ed25519': 'ed25519-pub',
+      'secp256k1': 'secp256k1-pub',
+      'x25519': 'x25519-pub'
+    };
+    
+    const didKeyType = keyTypeMap[keyType];
+    if (!didKeyType) {
+      throw new Error(`Unsupported key type for DID: ${keyType}`);
+    }
+    
+    return createDIDKey(publicKeyHex, didKeyType);
   }
 
   /**
    * Generate did:web
+   * Uses exceptions for error handling (simple operation pattern)
    */
-  generateWeb(domain: string, path?: string): string | null {
-    try {
-      if (!domain) {
-        throw new Error('Domain is required for did:web');
-      }
-      
-      return createDIDWeb(domain, path);
-    } catch (error) {
-      console.error('[🪪] Failed to generate did:web:', error);
-      return null;
+  generateWeb(domain: string, path?: string): string {
+    if (!domain) {
+      throw new Error('Domain is required for did:web');
     }
+    
+    return createDIDWeb(domain, path);
   }
 
   /**
@@ -183,32 +167,31 @@ export class DID extends Unit {
   /**
    * Convert public key to hex format
    * Uses @synet/keys utilities for proper format detection and conversion
+   * Uses exceptions for error handling (simple operation pattern)
    */
-  private convertKeyToHex(publicKey: string): string | null {
-    try {
-      if (!publicKey || typeof publicKey !== 'string') {
-        return null;
-      }
-      
-      const trimmed = publicKey.trim();
-      const format = detectKeyFormat(trimmed);
-      
-      if (format === 'hex') {
-        // Already in hex format
-        return trimmed.toLowerCase();
-      }
-      
-      if (format === 'pem' || format === 'base64') {
-        // Convert to hex using @synet/keys utility
-        const hexKey = toHex(trimmed);
-        return hexKey ? hexKey.toLowerCase() : null;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('[🪪] Failed to convert key to hex:', error);
-      return null;
+  private convertKeyToHex(publicKey: string): string {
+    if (!publicKey || typeof publicKey !== 'string') {
+      throw new Error('Invalid public key: must be a non-empty string');
     }
+    
+    const trimmed = publicKey.trim();
+    const format = detectKeyFormat(trimmed);
+    
+    if (format === 'hex') {
+      // Already in hex format
+      return trimmed.toLowerCase();
+    }
+    
+    if (format === 'pem' || format === 'base64') {
+      // Convert to hex using @synet/keys utility
+      const hexKey = toHex(trimmed);
+      if (!hexKey) {
+        throw new Error('Failed to convert key to hex format');
+      }
+      return hexKey.toLowerCase();
+    }
+    
+    throw new Error(`Unsupported key format: ${format}`);
   }
 
   // Unit implementation
