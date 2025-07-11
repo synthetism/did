@@ -158,17 +158,18 @@ describe('DID Unit', () => {
       });
 
       it('should attempt to generate did:key when key capabilities are learned', async () => {
-        // Learn key capabilities
+        // Learn key capabilities with valid hex key (like real usage)
         didUnit.learn([{
           unitId: 'test-unit',
           capabilities: {
-            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
+            getPublicKey: () => 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
             getType: () => 'ed25519'
           }
         }]);
         
-        // This should now throw because the key conversion will fail
-        await expect(didUnit.generateKey()).rejects.toThrow();
+        // This should successfully generate a DID
+        const did = await didUnit.generateKey();
+        expect(did).toBe('did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw');
       });
     });
 
@@ -203,17 +204,18 @@ describe('DID Unit', () => {
       });
 
       it('should attempt did:key generation when method is key', async () => {
-        // Learn key capabilities
+        // Learn key capabilities with valid hex key
         didUnit.learn([{
           unitId: 'test-unit',
           capabilities: {
-            getPublicKey: () => '-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----',
+            getPublicKey: () => 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
             getType: () => 'ed25519'
           }
         }]);
 
-        // This should throw because the key conversion will fail with invalid PEM
-        await expect(didUnit.generate({ method: 'key' })).rejects.toThrow();
+        // This should successfully generate a DID
+        const did = await didUnit.generate({ method: 'key' });
+        expect(did).toBe('did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw');
       });
 
       it('should throw error for did:key without key capabilities', async () => {

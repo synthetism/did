@@ -18,36 +18,195 @@
         \ \____/ /\_____\\ \____/  
          \/___/  \/_____/ \/___/   
                                                                                                         
-version: 1.0.3
-description: You are Signal
-security-level: Never enough
+version: 1.0.4
+description: [⊚] You are the Signal
 ```
 
-**Secure, minimal, standards-compliant DID library for production environments.**
+**Battle-tested decentralized identifier library with zero dependencies.**
 
-This library provides DID creation and validation with a security-first approach. Built for high-stakes environments where cryptographic correctness, minimal attack surface, and standards compliance are non-negotiable.
+```typescript
+import { createDIDKey, generateKeyPair } from '@synet/did';
+const keyPair = generateKeyPair('ed25519');
+const did = createDIDKey(keyPair.publicKey, 'Ed25519');
+// → did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK
+```
 
-## Security-First Design
+**Security features:**
+- Zero dependencies (no supply chain vulnerabilities)
+- W3C DID Core specification compliance  
+- Strict validation and multicodec encoding
+- Full TypeScript support
 
-Every aspect of this library prioritizes security and correctness:
+## DID Functions & API
 
-- **No cryptographic fallbacks** - Uses only secure, validated cryptographic primitives without weak fallbacks
-- **Minimal attack surface** - Zero runtime dependencies, focused scope, no hidden complexity
-- **Standards-compliant** - Follows W3C DID Core specification and multicodec standards exactly
-- **Strict validation** - Comprehensive input sanitization and format validation
-- **Battle-tested** - Extensive test suite with 100% code coverage and cross-reference validation
-- **Audit-ready** - Clean, readable code with security-aware documentation
+### Core Functions
 
-## Production Features
+```typescript
+// DID Creation
+createDIDKey(publicKeyHex: string, keyType: 'Ed25519' | 'secp256k1'): string
+createDIDWeb(domain: string, path?: string): string
+createDID(options: DIDOptions): string
 
-- **Zero dependencies** - No external runtime dependencies means no supply chain vulnerabilities
-- **DID Methods**: Support for `did:key` and `did:web` with proper multicodec encoding
-- **Type-safe**: Full TypeScript support prevents runtime type errors
-- **DID Documents**: Generate standards-compliant DID documents with proper service ID formatting
-- **Validation**: Parse and validate DID URLs with detailed, actionable error messages
-- **Performance**: Lightweight footprint with tree-shaking support for optimal bundle size
+// DID Operations  
+parseDID(did: string): DIDComponents
+validateDID(did: string): DIDValidationResult
+isDID(input: string): boolean
 
-## Installation
+// DID Documents
+createDIDDocument(did: string, publicKeyHex: string, keyType: string): DIDDocument
+```
+
+### Usage Examples
+
+```typescript
+import { createDIDKey, createDIDWeb, parseDID, validateDID } from '@synet/did';
+
+// Create DIDs
+const keyDID = createDIDKey('87043e28b2c...', 'Ed25519');
+const webDID = createDIDWeb('company.com', '/identity');
+
+// Parse and validate
+const components = parseDID(keyDID);
+const validation = validateDID(webDID);
+
+console.log(components.method);  // 'key'
+console.log(validation.valid);   // true
+```
+
+### Types & Interfaces
+
+```typescript
+interface DIDComponents {
+  method: string;
+  identifier: string;
+  did: string;
+}
+
+interface DIDValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+interface DIDDocument {
+  '@context': string[];
+  id: string;
+  verificationMethod: VerificationMethod[];
+  authentication: string[];
+  // ...full W3C specification
+}
+```
+
+##  DID Unit Patterns
+
+The `DID` unit learns from other units and can operate autonomously in complex systems.
+
+### Scenario 1: Simple Learning
+
+Basic DID unit that learns from a Key unit:
+
+```typescript
+import { DID } from '@synet/did';
+import { generateKeyPair, Signer } from '@synet/keys';
+
+// 1. Create units
+const keyPair = generateKeyPair('ed25519');
+const signer = Signer.create(keyPair.privateKey, keyPair.publicKey, 'ed25519');
+const didUnit = DID.create();
+
+// 2. Unit learns (no private key transfer!)
+const key = signer.createKey();
+await didUnit.learn([key.teach()]);
+
+// 3. Generate DID autonomously
+const did = await didUnit.generateKey();
+console.log('Generated:', did);
+```
+
+### Scenario 2: Advanced Operations
+
+DID unit with document generation and resolution:
+
+```typescript
+import { DID } from '@synet/did';
+
+const didUnit = DID.create();
+await didUnit.learn([capabilities]);
+
+// Multiple operations after learning
+const did = await didUnit.generateKey();
+const document = await didUnit.generateDocument();
+const resolved = await didUnit.resolve(did);
+
+console.log('DID:', did);
+console.log('Document:', document);
+console.log('Resolved:', resolved);
+```
+
+### Scenario 3: Identity Composition
+
+Complete identity creation using multiple units:
+
+```typescript
+import { Identity } from '@synet/identity';
+
+// This internally coordinates:
+// - Key unit (cryptographic operations)
+// - DID unit (learns from Key, generates DID)  
+// - Credential unit (issues identity credential)
+// - Signer unit (signing operations)
+
+const identity = await Identity.generate({ alias: 'alice' });
+
+console.log('🪪 Complete identity:');
+console.log('   DID:', identity.getDid());
+console.log('   Alias:', identity.getAlias());
+console.log('   Key ID:', identity.getKid());
+```
+
+### DID Unit API
+
+```typescript
+class DID {
+  static create(): DID
+  
+  // Learning & capabilities
+  learn(capabilities: TeachingCapabilities[]): Promise<boolean>
+  capabilities(): string[]
+  
+  // Core operations (after learning)
+  generateKey(): Promise<string | null>
+  generateDocument(): Promise<DIDDocument | null>
+  resolve(did: string): Promise<DIDDocument | null>
+  
+  // Unit interface
+  execute(command: string, params?: any): Promise<Result<any>>
+  whoami(): string
+}
+```
+
+## Installation & Usage
+
+```bash
+npm install @synet/did @synet/keys
+```
+
+**Error handling:**
+```typescript
+// Validation approach (non-throwing)
+const result = validateDID('invalid:format');
+if (!result.valid) console.error(result.error);
+
+// Try-catch approach
+try {
+  const did = createDIDKey('invalid-key', 'Ed25519');
+} catch (error) {
+  console.error('DID Error:', error.message);
+}
+```
+
+---
+
+Built on [@synet/keys](www.npmjs.com/package/@synet/keys)
 
 ```bash
 npm install @synet/did
@@ -317,65 +476,6 @@ const x25519Unit = DID.createFromKey(x25519PublicKey, 'x25519');
 const x25519DID = await x25519Unit.generate({ method: 'key' });
 // Result: "did:key:z6LS..."
 ```
-
-### Error Handling with Units
-
-DID Units provide graceful error handling while maintaining unit integrity:
-
-```typescript
-import { DID } from '@synet/did';
-
-// Create unit with invalid key (unit creation still succeeds)
-const unit = DID.createFromKey('invalid-key', 'ed25519');
-
-console.log(unit.created); // true (unit creation succeeded)
-console.log(unit.canGenerateKey()); // true (unit has direct key data)
-
-// DID generation will fail gracefully
-const did = await unit.generate({ method: 'key' });
-console.log(did); // null (operation failed)
-console.log(unit.created); // true (unit still valid)
-
-// Unit remains functional for other operations
-const webDID = await unit.generate({ 
-  method: 'web', 
-  domain: 'example.com' 
-});
-console.log(webDID); // "did:web:example.com" (succeeds)
-```
-
-### Architecture Principles
-
-The DID Unit follows clear separation of concerns in the Synet ecosystem:
-
-#### **Signer → Key → DID** (Proper Flow)
-
-- **Signer**: Generates key pairs, holds private keys, performs signing operations
-- **Key**: Holds public keys only, learned from Signer, enables verification
-- **DID**: Creates identifiers from public keys, learned from Key (not Signer)
-
-#### **Why This Separation Matters**
-
-```typescript
-// ❌ WRONG: DID learning directly from Signer (exposes private key capabilities)
-// didUnit.learn([signerUnit.teach()]); // Dangerous!
-
-// ✅ CORRECT: DID learns only public key info from Key
-const signer = Signer.generate('ed25519');
-if (!signer) throw new Error('Failed to generate signer');
-
-const key = Key.createFromSigner(signer, { purpose: 'identity' });
-if (!key) throw new Error('Failed to create key from signer');
-
-const did = DID.create();
-did.learn([key.teach()]); // DID learns public key capabilities only
-```
-
-#### **Evolution Patterns**
-
-1. **Simple**: Direct key input (`DID.createFromKey()`)
-2. **Composable**: Separate units with teach/learn
-3. **SuperKey**: Key evolves to absorb Signer + DID capabilities
 
 ### Integration with @synet/keys
 

@@ -184,11 +184,16 @@ export class DID extends Unit {
     
     if (format === 'pem' || format === 'base64') {
       // Convert to hex using @synet/keys utility
-      const hexKey = toHex(trimmed);
-      if (!hexKey) {
-        throw new Error('Failed to convert key to hex format');
+      try {
+        const hexKey = toHex(trimmed);
+        if (!hexKey) {
+          throw new Error('Failed to convert key to hex format');
+        }
+        return hexKey.toLowerCase();
+      } catch (error) {
+        // Re-throw with cleaner error message for DID context
+        throw new Error(`Failed to convert ${format} key to hex format: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-      return hexKey.toLowerCase();
     }
     
     throw new Error(`Unsupported key format: ${format}`);
@@ -315,7 +320,7 @@ Examples:
           }
           
           if (capName === 'getKeyType' || capName === 'getPublicKey') {
-            console.log(`${this.dna.id} unit learned ${capName} capability from ${unitId}`);
+            console.debug(`${this.dna.id} unit learned ${capName} capability from ${unitId}`);
           }
         }
       }
@@ -369,13 +374,13 @@ Examples:
   }): DID | null {
     try {
       if (!keyPair.publicKey || !keyPair.keyType) {
-        console.error('[🪪] Invalid key pair data');
+        console.error(' Invalid key pair data');
         return null;
       }
       
       return DID.createFromKey(keyPair.publicKey, keyPair.keyType, keyPair.meta);
     } catch (error) {
-      console.error('[🪪] Failed to create DID from key pair:', error);
+      console.error('Failed to create DID from key pair:', error);
       return null;
     }
   }
