@@ -333,7 +333,10 @@ Examples:
           }
           
           if (capName === 'getKeyType' || capName === 'getPublicKey') {
+            
+            //  TODO - Replace with proper logging system
             console.debug(`${this.props.dna.id} unit learned ${capName} capability from ${unitId}`);
+
           }
         }
       }
