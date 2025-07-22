@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2025-07-22
+
+### Changed
+
+- **BREAKING**: `DID.create()` now accepts `DIDConfig` object instead of raw `meta` parameter
+- **API Consistency**: Updated to match @synet/keys v1.0.6 patterns with config objects
+- **Props-based Architecture**: Enhanced Unit Architecture Doctrine v1.0.5 compliance
+- **Updated Documentation**: Complete README refresh with new API signatures and examples
+
+### Added
+
+- **DIDConfig interface**: Structured configuration object with `metadata` property
+- **Enhanced API Examples**: Updated all code examples to use new config-based patterns
+- **Type Safety**: Improved TypeScript definitions for better developer experience
+
 ## [1.0.3] - 2025-07-04
 
 ### Added

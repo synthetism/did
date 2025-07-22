@@ -18,7 +18,7 @@
         \ \____/ /\_____\\ \____/  
          \/___/  \/_____/ \/___/   
                                                                                                         
-version: 1.0.4
+version: 1.0.5
 description: [⊚] You are the Signal
 ```
 
@@ -76,6 +76,10 @@ console.log(validation.valid);   // true
 ### Types & Interfaces
 
 ```typescript
+interface DIDConfig {
+  metadata?: Record<string, unknown>;
+}
+
 interface DIDComponents {
   method: string;
   identifier: string;
@@ -110,7 +114,11 @@ import { generateKeyPair, Signer } from '@synet/keys';
 
 // 1. Create units
 const keyPair = generateKeyPair('ed25519');
-const signer = Signer.create(keyPair.privateKey, keyPair.publicKey, 'ed25519');
+const signer = Signer.create({
+  privateKeyPEM: keyPair.privateKey,
+  publicKeyPEM: keyPair.publicKey,
+  keyType: 'ed25519'
+});
 const didUnit = DID.create();
 
 // 2. Unit learns (no private key transfer!)
@@ -167,7 +175,7 @@ console.log('   Key ID:', identity.getKid());
 
 ```typescript
 class DID {
-  static create(): DID
+  static create(config?: DIDConfig): DID
   
   // Learning & capabilities
   learn(capabilities: TeachingCapabilities[]): Promise<boolean>
@@ -363,7 +371,7 @@ async function createProductionIdentity(userId: string) {
   if (!key) throw new Error('Failed to create key from signer');
 
   // 3. Create DID from Key capabilities (no private key exposure)
-  const did = DID.create({ userId, purpose: 'authentication' });
+  const did = DID.create({ metadata: { userId, purpose: 'authentication' } });
   did.learn([key.teach()]);
 
   // 4. Generate the DID
@@ -447,7 +455,7 @@ console.log(unit.whoami());
 
 // Export unit state
 const unitData = unit.toJSON();
-console.log(unitData.meta); // { purpose: 'authentication', environment: 'production' }
+console.log(unitData.metadata); // { purpose: 'authentication', environment: 'production' }
 
 // Teaching capabilities to other units
 const teachings = unit.teach();
@@ -534,17 +542,17 @@ The DID Unit provides convenient factory methods for different use cases:
 ```typescript
 import { DID } from '@synet/did';
 
-// DID.create(meta?) - Standard unit creation
-const unit1 = DID.create({ purpose: 'authentication' });
+// DID.create(config?) - Standard unit creation
+const unit1 = DID.create({ metadata: { purpose: 'authentication' } });
 
-// DID.createFromKey(publicKey, keyType, meta?) - Direct key input
+// DID.createFromKey(publicKey, keyType, metadata?) - Direct key input
 const unit2 = DID.createFromKey(
   'abcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
   'ed25519',
   { source: 'hardware-key' }
 );
 
-// DID.createFromKeyPair(keyPair, meta?) - Key pair object
+// DID.createFromKeyPair(keyPair, metadata?) - Key pair object
 const keyPair = { publicKey: '...', type: 'ed25519' };
 const unit3 = DID.createFromKeyPair(keyPair, { generated: Date.now() });
 
@@ -714,9 +722,9 @@ const webDID = createDID({
 
 ### DID Unit API
 
-#### `DID.create(meta?)`
+#### `DID.create(config?)`
 
-Create a new DID Unit instance with optional metadata. This is the standard way to create a composable DID unit.
+Create a new DID Unit instance with optional configuration. This is the standard way to create a composable DID unit.
 
 ```typescript
 import { DID } from '@synet/did';
@@ -724,18 +732,20 @@ import { DID } from '@synet/did';
 // Basic unit creation
 const unit = DID.create();
 
-// Unit with metadata
+// Unit with configuration
 const unit = DID.create({
-  purpose: 'authentication',
-  environment: 'production',
-  created: Date.now()
+  metadata: {
+    purpose: 'authentication',
+    environment: 'production',
+    created: Date.now()
+  }
 });
 
 console.log(unit.created); // true
 console.log(unit.whoami()); // "[🪪] DID Unit - waiting to learn key capabilities"
 ```
 
-#### `DID.createFromKey(publicKey, keyType, meta?)`
+#### `DID.createFromKey(publicKey, keyType, metadata?)`
 
 Create a DID Unit with direct key input. Perfect for simple usage patterns where you have existing keys.
 
@@ -757,7 +767,7 @@ console.log(did); // "did:key:z6Mk..."
 console.log(unit.canGenerateKey()); // true
 ```
 
-#### `DID.createFromKeyPair(keyPair, meta?)`
+#### `DID.createFromKeyPair(keyPair, metadata?)`
 
 Create a DID Unit from a key pair object. Convenient for working with `generateKeyPair()` results from `@synet/keys`.
 
