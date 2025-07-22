@@ -10,23 +10,22 @@ describe('DID Unit', () => {
   let didUnit: DID;
 
   beforeEach(() => {
-    didUnit = DID.create();
+    didUnit = DID.create({metadata: { name: 'test-did', purpose: 'testing' } });
   });
 
   describe('Static Methods', () => {
     describe('create', () => {
       it('should create a DID unit successfully', () => {
-        const unit = DID.create();
+        const unit = DID.create({metadata: { name: 'test-did', purpose: 'testing' } });
         expect(unit).toBeDefined();
-        expect(unit.created).toBe(true);
-        expect(unit.error).toBeUndefined();
+
       });
 
       it('should create a DID unit with metadata', () => {
         const meta = { name: 'test-did', purpose: 'testing' };
-        const unit = DID.create(meta);
+        const unit = DID.create({metadata: meta });
         expect(unit).toBeDefined();
-        expect(unit.created).toBe(true);
+
         expect(unit.metadata).toEqual(meta);
       });
     });
@@ -35,7 +34,7 @@ describe('DID Unit', () => {
   describe('Unit Interface', () => {
     it('should have correct DNA', () => {
       // In Unit 1.0.4, dna.id is used instead of dna.name
-      expect(didUnit.dna.id).toBe('did-unit');
+      expect(didUnit.dna.id).toBe('did');
       expect(didUnit.dna.version).toBe('1.0.0');
       expect(didUnit.dna.parent).toBeUndefined();
     });
@@ -70,7 +69,7 @@ describe('DID Unit', () => {
     it('should teach capabilities to other units', () => {
       const teachings = didUnit.teach();
       expect(teachings).toBeDefined();
-      expect(teachings.unitId).toBe('did-unit');
+      expect(teachings.unitId).toBe('did');
       expect(teachings.capabilities).toBeDefined();
       expect(typeof teachings.capabilities.generate).toBe('function');
       expect(typeof teachings.capabilities.generateKey).toBe('function');
@@ -260,16 +259,16 @@ describe('DID Unit', () => {
     it('should serialize to JSON', () => {
       const json = didUnit.toJSON();
       expect(json).toBeDefined();
-      expect(json.type).toBe('did-unit');
+      expect(json.id).toBe('did');
       expect(json.canGenerateKey).toBe(false);
       expect(json.learnedCapabilities).toEqual(didUnit.capabilities());
     });
 
     it('should include metadata in JSON', () => {
       const meta = { name: 'test-did', version: '1.0.0' };
-      const unit = DID.create(meta);
+      const unit = DID.create({metadata: meta });
       const json = unit.toJSON();
-      expect(json.meta).toEqual(meta);
+      expect(json.metadata).toEqual(meta);
     });
   });
 

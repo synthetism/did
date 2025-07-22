@@ -30,7 +30,7 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
   describe('Core Unit 1.0.4 Compatibility', () => {
     it('should have correct DNA with id field', () => {
       expect(didUnit.dna).toBeDefined();
-      expect(didUnit.dna.id).toBe('did-unit');
+      expect(didUnit.dna.id).toBe('did');
       expect(didUnit.dna.version).toBe('1.0.0');
       expect(didUnit.dna.id).not.toBe(undefined);
       expect(didUnit.dna.id).not.toBe('name'); // Not the old 'name' field
@@ -42,7 +42,7 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       // Unit 1.0.4 contract structure
       expect(contract).toHaveProperty('unitId');
       expect(contract).toHaveProperty('capabilities');
-      expect(contract.unitId).toBe('did-unit');
+      expect(contract.unitId).toBe('did');
       expect(typeof contract.capabilities).toBe('object');
       
       // Should have core DID capabilities
@@ -104,7 +104,7 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       const signerContract = signer.teach();
       
       // Verify signer provides proper contract
-      expect(signerContract.unitId).toBe('signer-unit');
+      expect(signerContract.unitId).toBe('signer');
       expect(signerContract.capabilities).toHaveProperty('getPublicKey');
       expect(signerContract.capabilities).toHaveProperty('getKeyType');
       
@@ -112,8 +112,8 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       didUnit.learn([signerContract]);
       
       // Should have learned capabilities
-      expect(didUnit.can('signer-unit.getPublicKey')).toBe(true);
-      expect(didUnit.can('signer-unit.getKeyType')).toBe(true);
+      expect(didUnit.can('signer.getPublicKey')).toBe(true);
+      expect(didUnit.can('signer.getKeyType')).toBe(true);
       expect(didUnit.can('getPublicKey')).toBe(true);
       expect(didUnit.can('getKeyType')).toBe(true);
       
@@ -126,8 +126,8 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       didUnit.learn([signerContract]);
 
       // Execute learned capabilities
-      const publicKey = await didUnit.execute('signer-unit.getPublicKey') as string;
-      const keyType = await didUnit.execute('signer-unit.getKeyType') as string;
+      const publicKey = await didUnit.execute('signer.getPublicKey') as string;
+      const keyType = await didUnit.execute('signer.getKeyType') as string;
 
       expect(typeof publicKey).toBe('string');
       expect(publicKey.length).toBeGreaterThan(0);
@@ -163,8 +163,8 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       didUnit.learn([contract1, contract2]);
       
       // Should have capabilities from both units
-      expect(didUnit.can('signer-unit.getPublicKey')).toBe(true);
-      expect(didUnit.can('signer-unit.getKeyType')).toBe(true);
+      expect(didUnit.can('signer.getPublicKey')).toBe(true);
+      expect(didUnit.can('signer.getKeyType')).toBe(true);
       
       // Last learned should win for direct capabilities
       expect(didUnit.canGenerateKey()).toBe(true);
@@ -235,7 +235,7 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       // Identity should remain unchanged
       expect(didUnit.dna.id).toBe(originalId);
       expect(didUnit.dna.version).toBe(originalVersion);
-      expect(didUnit.whoami()).toContain('did-unit');
+      expect(didUnit.whoami()).toContain('did');
     });
 
     it('should support evolution pattern', () => {
@@ -251,7 +251,7 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
       // Should have evolved DNA
       expect(evolvedUnit.dna.id).toBe('enhanced-did-unit');
       expect(evolvedUnit.dna.parent).toBeDefined();
-      expect(evolvedUnit.dna.parent?.id).toBe('did-unit');
+      expect(evolvedUnit.dna.parent?.id).toBe('did');
       
       // Should retain learned capabilities
       expect(evolvedUnit.can('getPublicKey')).toBe(true);
@@ -317,8 +317,8 @@ describe('DID Unit - Unit 1.0.4 Integration', () => {
     it('should provide unit information', () => {
       const info = didUnit.toJSON();
       
-      expect(info).toHaveProperty('id');
-      expect(info).toHaveProperty('type', 'did-unit');
+
+      expect(info).toHaveProperty('id', 'did');
       expect(info).toHaveProperty('canGenerateKey');
       expect(info).toHaveProperty('learnedCapabilities');
       

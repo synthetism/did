@@ -10,7 +10,7 @@
  * @author Synet Team
  */
 
-import { Unit, createUnitSchema, type TeachingContract } from '@synet/unit';
+import { Unit, createUnitSchema, type TeachingContract, type UnitProps } from '@synet/unit';
 import { createDIDKey, createDIDWeb, type KeyType } from './create';
 import { toHex, detectKeyFormat } from '@synet/keys';
 import { createId } from './utils';
@@ -33,23 +33,26 @@ export interface DIDOptions {
   meta?: Record<string, unknown>;
 }
 
+
+export interface DIDConfig {
+  metadata?: Record<string, unknown>;
+}
+
+export interface DIDProps extends UnitProps {
+  created: Date;
+  metadata: Record<string, unknown>;
+}
+
 /**
  * DID Unit - Minimalistic DID generation using pure Unit Architecture
  * [🪪] Learns key capabilities through standard teach/learn pattern
  */
-export class DID extends Unit {
-  private didId: string;
-  private meta: Record<string, unknown>;
+export class DID extends Unit<DIDProps> {
 
-  private constructor(meta: Record<string, unknown> = {}) {
+  private constructor(props: DIDProps ) {
     // Create unit with proper ID for Unit 1.0.4 architecture
-    super(createUnitSchema({
-      id: 'did-unit',
-      version: '1.0.0'
-    }));
+        super(props);
     
-    this.didId = createId();
-    this.meta = { ...meta };
 
     // Register base capabilities
     this._addCapability('generate', async (...args: unknown[]) => {
@@ -72,8 +75,18 @@ export class DID extends Unit {
   /**
    * Create DID unit
    */
-  static create(meta?: Record<string, unknown>): DID {
-    return new DID(meta);
+  static create(config?:DIDConfig): DID {
+   
+     const props: DIDProps = {
+      dna: createUnitSchema({      
+        id: "did",
+        version: "1.0.0"
+      }),
+      created: new Date(),
+      metadata: config?.metadata || {}
+    };
+               
+     return new DID(props);
   }
 
   /**
@@ -202,7 +215,7 @@ export class DID extends Unit {
   // Unit implementation
   whoami(): string {
     const capability = this.canGenerateKey() ? 'ready to generate DIDs' : 'waiting to learn key capabilities';
-    return `${this.dna.id}@${this.dna.version}\nCan Generate Key DID: ${this.canGenerateKey()}\n${capability}`;
+    return `${this.props.dna.id}@${this.props.dna.version}\nCan Generate Key DID: ${this.canGenerateKey()}\n${capability}`;
   }
 
   capabilities(): string[] {
@@ -265,7 +278,7 @@ Examples:
   teach(): TeachingContract {
     // Return proper TeachingContract format for Unit 1.0.4 compatibility
     return {
-      unitId: this.dna.id,
+      unitId: this.props.dna.id,
       capabilities: {
         generate: async (...args: unknown[]) => await this.generate(args[0] as DIDOptions),
         generateKey: async () => await this.generateKey(),
@@ -320,7 +333,7 @@ Examples:
           }
           
           if (capName === 'getKeyType' || capName === 'getPublicKey') {
-            console.debug(`${this.dna.id} unit learned ${capName} capability from ${unitId}`);
+            console.debug(`${this.props.dna.id} unit learned ${capName} capability from ${unitId}`);
           }
         }
       }
@@ -329,21 +342,21 @@ Examples:
 
   toJSON(): Record<string, unknown> {
     return {
-      id: this.didId,
-      type: 'did-unit',
-      meta: this.meta,
+      id: this.props.dna.id,
       canGenerateKey: this.canGenerateKey(),
-      learnedCapabilities: this.capabilities()
+      learnedCapabilities: this.capabilities(),
+      dna: this.props.dna,
+      metadata: this.props.metadata,
     };
   }
 
   // Getters
   get id(): string {
-    return this.didId;
+    return this.props.dna.id;
   }
 
   get metadata(): Record<string, unknown> {
-    return { ...this.meta };
+    return { ...this.props.metadata };
   }
 
   /**
@@ -353,8 +366,18 @@ Examples:
    * @param meta Optional metadata
    */
   static createFromKey(publicKeyPEM: string, keyType: string, meta?: Record<string, unknown>): DID {
-    const did = new DID(meta);
     
+     const props: DIDProps = {
+      dna: createUnitSchema({      
+        id: "did",
+        version: "1.0.0"
+      }),
+      created: new Date(),
+      metadata: meta || {}
+    };
+
+    const did = new DID(props);
+
     // Add key capabilities directly
     did._addCapability('getPublicKey', () => publicKeyPEM);
     did._addCapability('getKeyType', () => keyType);

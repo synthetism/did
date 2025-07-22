@@ -946,7 +946,7 @@ const unitData = unit.toJSON();
 console.log(unitData);
 // {
 //   id: 'abc12345',
-//   type: 'did-unit',
+//   type: 'did',
 //   meta: { purpose: 'authentication' },
 //   canGenerateKey: true,
 //   learnedCapabilities: ['generate', 'generateKey', ...]
