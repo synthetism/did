@@ -12,15 +12,6 @@
 
 import { Unit, createUnitSchema, type TeachingContract, type UnitProps } from '@synet/unit';
 import { createDIDKey, createDIDWeb, type KeyType } from './create';
-import { createId } from './utils';
-
-/**
- * Create a random ID for the unit
- */
-/* 
-function createId(length = 24): string {
-  return crypto.randomBytes(length).toString('hex').slice(0, length);
-}*/
 
 /**
  * Options for creating a DID
@@ -35,7 +26,7 @@ export interface DIDOptions {
 
 export interface DIDConfig {
   publicKeyHex: string;
-  keyType: KeyType;
+  keyType: KeyType | "Ed25519" | "secp256k1" | "X25519";
   metadata?: Record<string, unknown>;
 }
 
@@ -43,12 +34,14 @@ export interface DIDProps extends UnitProps {
   created: Date;
   metadata: Record<string, unknown>;
   publicKeyHex: string;
-  keyType: KeyType;
+  keyType: KeyType |  "Ed25519" | "secp256k1" | "X25519";
 }
+
+const VERSION = '1.0.6';
 
 /**
  * DID Unit - Minimalistic DID generation using pure Unit Architecture
- * [🪪] Learns key capabilities through standard teach/learn pattern
+ * Learns key capabilities through standard teach/learn pattern
  */
 export class DID extends Unit<DIDProps> {
 
@@ -70,7 +63,7 @@ export class DID extends Unit<DIDProps> {
     const props: DIDProps = {
       dna: createUnitSchema({      
         id: "did",
-        version: "1.0.0"
+        version: VERSION,
       }),
       created: new Date(),
       metadata: config.metadata || {},
@@ -150,6 +143,11 @@ DID Unit - Minimalistic DID Generation
 
 I am: ${this.whoami()}
 
+Params:
+
+- PublicKeyHex
+- KeyType
+
 Core Capabilities:
 - generate(options): Generate DID (key or web method)
 - generateKey(): Generate did:key from learned capabilities
@@ -188,7 +186,6 @@ To generate did:key, this unit needs to learn from a key unit:
   toJSON(): Record<string, unknown> {
     return {
       id: this.props.dna.id,
-
       publicKeyHex: this.props.publicKeyHex,
       keyType: this.props.keyType,
       dna: this.props.dna,
@@ -208,7 +205,7 @@ To generate did:key, this unit needs to learn from a key unit:
   get publicKeyHex(): string {
     return this.props.publicKeyHex;
   }
-  get keyType(): KeyType {
+  get keyType(): string {
     return this.props.keyType;
   }
 }
