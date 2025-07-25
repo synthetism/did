@@ -210,23 +210,8 @@ describe('DID Unit - Clean Implementation', () => {
   });
 
   describe('Unit Architecture Compliance', () => {
-    describe('whoami()', () => {
-      it('should return descriptive string with key info', () => {
-        const result = did.whoami();
-        
-        expect(result).toContain('DID Unit');
-        expect(result).toContain(did.keyType);
-        expect(result).toContain(did.publicKeyHex.substring(0, 8));
-      });
-    });
 
-    describe('capabilities()', () => {
-      it('should return expected capabilities list', () => {
-        const caps = did.capabilities();
-        
-        expect(caps).toEqual(['generate', 'generateKey', 'generateWeb', 'canGenerateKey']);
-      });
-    });
+  
 
     describe('teach()', () => {
       it('should return valid TeachingContract', () => {

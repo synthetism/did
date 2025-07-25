@@ -20,7 +20,6 @@ export interface DIDOptions {
   method?: 'key' | 'web';
   domain?: string;
   path?: string;
-  meta?: Record<string, unknown>;
 }
 
 
@@ -130,30 +129,49 @@ export class DID extends Unit<DIDProps> {
 
   // Unit implementation
   whoami(): string {
-    return `DID Unit v${this.props.dna.version} - Key: ${this.props.keyType}, Hex: ${this.props.publicKeyHex.substring(0, 8)}...`;
+    return `DID Unit v${this.props.dna.version} - Minimalistic DID Generation`;
   }
 
   capabilities(): string[] {
-    return ['generate', 'generateKey', 'generateWeb', 'canGenerateKey'];
+    return this._getAllCapabilities();
   }
 
   help(): void {
     console.log(`
-DID Unit - Minimalistic DID Generation
+Hi, 
 
 I am: ${this.whoami()}
 
-Params:
+Create me with params:
 
-- PublicKeyHex
-- KeyType
+interface DIDConfig {
+  publicKeyHex: string;
+  keyType: "Ed25519" | "secp256k1" | "X25519";
+  metadata?: Record<string, unknown>;
+}
+
+DID.create(params:DIDConfig);
 
 Core Capabilities:
 - generate(options): Generate DID (key or web method)
 - generateKey(): Generate did:key from learned capabilities
 - generateWeb(domain, path?): Generate did:web
-- canGenerateKey(): Check if ready to generate did:key
 - toJSON(): Export unit information
+
+Generate options:
+
+export interface DIDOptions {
+  method?: 'key' | 'web';
+  domain?: string;  // for web
+  path?: string; // for web
+}
+
+Getters: 
+
+- metadata()
+- publicKeyHex(): string 
+- keyType(): string 
+
 
 Learning Pattern:
 To generate did:key, this unit needs to learn from a key unit:
@@ -205,7 +223,7 @@ To generate did:key, this unit needs to learn from a key unit:
   get publicKeyHex(): string {
     return this.props.publicKeyHex;
   }
-  get keyType(): string {
+  get keyType(): string  {
     return this.props.keyType;
   }
 }

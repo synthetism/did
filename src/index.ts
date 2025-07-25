@@ -11,11 +11,11 @@
  * - Basic DID document generation
  * - Type-safe interfaces and utilities
  *
- * @version 1.0.3
+ * @version 1.0.6
  * @license MIT
  */
 
-export const VERSION = "1.0.3";
+export const VERSION = "1.0.6";
 
 
 // Export types
